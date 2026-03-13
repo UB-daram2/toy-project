@@ -103,15 +103,46 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-  # ── 3단계: Vercel 프로덕션 배포 ─────────────────────────────────────────────
+  # ── 3단계: Vercel 스테이징 배포 (PR 프리뷰) ─────────────────────────────────
+  # PR이 열릴 때마다 프로덕션과 분리된 Vercel 프리뷰 URL에 자동 배포한다.
+  # 변경사항을 스테이징 환경에서 먼저 확인한 뒤 master에 머지하는 게이트 역할.
+  # --prod 없이 실행하면 Vercel이 고유 프리뷰 URL을 생성한다 (프로덕션에 영향 없음).
+  deploy-preview:
+    name: Deploy Preview (Staging)
+    needs: [build-and-test, e2e]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy to Vercel Preview
+        # --prod 없이 실행 → 프로덕션과 분리된 고유 프리뷰 URL 생성 (스테이징)
+        run: npx vercel --yes
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  # ── 4단계: Vercel 프로덕션 배포 ─────────────────────────────────────────────
   # master 브랜치 push + 1·2단계 모두 통과한 경우에만 실행된다.
-  # PR은 배포 제외 (미리보기 빌드는 Vercel 자체 PR preview로 처리).
+  # PR은 3단계 스테이징 배포로 검증 후 머지 → 이 단계에서 프로덕션 반영.
   # 배포 실패 시: Vercel Dashboard → Deployments → 이전 빌드 "Promote to Production"으로 롤백
   deploy:
     name: Deploy to Vercel
     needs: [build-and-test, e2e]
     runs-on: ubuntu-latest
-    # master 브랜치 push 시에만 배포 (PR은 배포 제외)
+    # master 브랜치 push 시에만 배포 (PR은 3단계 스테이징으로 대체)
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     steps:

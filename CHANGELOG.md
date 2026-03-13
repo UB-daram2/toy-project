@@ -16,10 +16,15 @@
 - **반응형 sticky Header** (`Header.tsx`): 모바일 2행 레이아웃(타이틀+테마토글 / 검색), 데스크톱 1행 레이아웃, 검색어 지우기(X) 버튼, `backdrop-blur-2xl` 글래스 효과
 - **그라디언트 배경** (`Dashboard.tsx`): `from-slate-50 via-white to-violet-50/20 dark:from-zinc-950 dark:via-zinc-950 dark:to-violet-950/10`
 
+### Added
+- **`deploy-preview` CI job** (`.github/workflows/ci.yml`): PR 이벤트 시 E2E 통과 후 Vercel 프리뷰 환경에 자동 배포 (스테이징). `--prod` 없이 실행하여 프로덕션과 분리된 고유 URL 생성 — 머지 전 실제 배포 환경 검증 가능
+
 ### Changed
 - **Dashboard 레이아웃**: `h-screen overflow-hidden flex-row` → `min-h-screen flex-col md:h-screen md:flex-row md:overflow-hidden` — 모바일 세로 자연 스크롤, 데스크톱 내부 스크롤 유지
 - **Sidebar**: `flex h-full w-64` → `hidden md:flex ...` — 모바일에서 CSS hidden, 데스크톱에서만 표시
 - **globals.css**: `button, a, input` 전환 easing 함수 `cubic-bezier(0.4, 0, 0.2, 1)` 추가
+- **CI/CD 파이프라인**: 3단계 → 4단계 구조 (build-and-test → e2e → deploy-preview(PR) / deploy(master))
+- **CLAUDE.md 핵심 의사결정**: Notion `loadPageChunk` + Yahoo Finance 의도적 선택 근거·위험 수용 이유·폴백 전략 명문화
 
 ---
 
