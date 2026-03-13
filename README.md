@@ -57,7 +57,7 @@
 | next-themes | 최신 | SSR-safe 다크모드 전환 |
 | lucide-react | 최신 | 일관된 아이콘 셋 |
 | Zustand | 최신 | 위젯 순서·메모·D-Day·북마크 상태 persist (localStorage 자동 영속화, SSR-safe) |
-| Jest + React Testing Library | 최신 | 284개 테스트, 커버리지 99%+, 90% 강제 |
+| Jest + React Testing Library | 최신 | 284개 테스트 (API Route 포함), 커버리지 99%+, 90% 강제 |
 | Playwright | 최신 | E2E 스모크 테스트 (홈 로딩, 내비게이션, 검색) |
 
 ### 외부 API (인증 불필요)
@@ -158,7 +158,7 @@ npm run test:coverage     # 커버리지 (전역 90% 이상 강제)
 
 | 지표 | 수치 |
 |------|------|
-| 테스트 수 | 284개 |
+| 테스트 수 | 284개 (API Route 포함) |
 | 구문 커버리지 | 99.1% |
 | 브랜치 커버리지 | 95.9% |
 | 함수 커버리지 | 100% |

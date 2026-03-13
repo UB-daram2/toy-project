@@ -1,19 +1,30 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.0] — 2026-03-13
+
+### Added
+- **API Route 테스트** (`@jest-environment node`):
+  - `GET /api/notion/[pageId]`: formatPageId, convertRichText, convertBlock, 에러 분기, Cache-Control 헤더 — 20개 테스트
+  - `GET /api/market`: KOSPI·KOSDAQ 정상·실패·예외·엣지케이스 — 14개 테스트
+  - 전체 테스트: 250개 → 284개
+- **Notion API Route 응답 캐싱**: `Cache-Control: public, s-maxage=300, stale-while-revalidate=60`
 
 ### Changed
-- PomodoroWidget 상태 로직을 `usePomodoro` 커스텀 훅으로 분리 (관심사 분리)
-- 위젯 순서 상태를 Zustand `useWidgetStore`로 이관 (persist 미들웨어로 localStorage 자동 영속화)
-- NotionModal 모바일 최적화: 하단 시트 스타일 (`items-end`, `max-h-[92dvh]`, `rounded-t-2xl`)
+- **메모·D-Day·북마크 상태**: `useEffect + localStorage` → Zustand persist 스토어 (`memoStore`, `ddayStore`, `bookmarkStore`) 이관 — SSR 하이드레이션 불일치 근본 해결
+- **PomodoroWidget**: 상태 로직을 `usePomodoro` 커스텀 훅으로 분리 (관심사 분리)
+- **위젯 순서 스토어**: `mergeWidgetState` 함수 export 추가 (100% 단위 테스트 가능)
+- CI/CD: deploy job 브랜치 조건 `main` → `master` 수정 (Vercel 자동 배포 정상 동작)
+
+### Fixed
+- `eslint-disable-next-line react-hooks/set-state-in-effect` 패턴 제거 (Zustand persist 전환으로 불필요)
 
 ---
 
 ## [0.6.0] — 2026-03-13
 
 ### Added
-- **D-Day 카운터 위젯**: 이벤트 이름·날짜 입력, localStorage 영속화, 날짜 오름차순 정렬
-- **북마크 위젯**: 이름·URL 입력, https:// 자동 추가, localStorage 영속화
+- **D-Day 카운터 위젯**: 이벤트 이름·날짜 입력, Zustand persist 영속화, 날짜 오름차순 정렬
+- **북마크 위젯**: 이름·URL 입력, https:// 자동 추가, Zustand persist 영속화
 - **미니 캘린더 위젯**: 월 네비게이션, date.nager.at API 한국 공휴일 표시
 - **포모도로 타이머 위젯**: 집중 25분 / 휴식 5분, 원형 진행 표시, 자동 모드 전환
 - **주간 날씨 예보 위젯**: Open-Meteo 7일 daily forecast, 최고/최저 기온·날씨 아이콘·강수량
@@ -21,7 +32,7 @@
 - **균일 카드 높이**: CSS Grid `auto-rows-[300px]`로 모든 카드 높이 고정, 내용 오버플로 스크롤
 - **환율 위젯**: Frankfurter API (1 USD 기준 KRW · EUR · JPY · CNY)
 - **국내 증시 위젯**: Yahoo Finance 비공식 API, Next.js API Route `/api/market`으로 CORS 우회
-- **메모 위젯**: localStorage 영속화, Enter키 입력 지원, 최대 20개 보관
+- **메모 위젯**: Zustand persist 영속화, Enter키 입력 지원, 최대 20개 보관
 - **날씨 & 미세먼지 위젯**: Open-Meteo API, 위치 기반(Geolocation), 서울 기본값 / PM2.5·PM10 등급 색상 표시
 - **최근 수정 Top 5 위젯**: Notion `last_edited_time` 기반 정렬
 - **많이 본 게시물 Top 5 위젯**: localStorage 열람 수 집계
@@ -35,7 +46,6 @@
 
 ### Fixed
 - 드래그 비활성 상태에서 링 강조 표시되는 버그 수정 (`draggingId !== null` 조건 추가)
-- SSR 하이드레이션 불일치: localStorage를 `useState` lazy init 대신 `useEffect`로 접근
 
 ---
 
