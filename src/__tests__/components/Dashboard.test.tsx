@@ -57,7 +57,7 @@ describe("Dashboard", () => {
     );
     // "처방조제"로 검색
     fireEvent.change(searchInput, { target: { value: "처방조제" } });
-    expect(screen.getByText("처방조제")).toBeInTheDocument();
+    expect(screen.getAllByText("처방조제").length).toBeGreaterThan(0);
   });
 
   it("검색 결과가 없으면 '검색 결과 없음' 메시지를 표시한다", () => {

@@ -39,150 +39,144 @@ export const knowledgeSections: KnowledgeSection[] = [
     colorKey: "blue",
     categories: [
       {
-        id: "upharm-system-process",
-        title: "유팜시스템",
-        links: [
-          {
-            id: "prescription-dispensing",
-            title: "처방조제",
-            url: "https://www.notion.so/87e1f915cdf083ca827e812ef3a5a3e0",
-          },
-          {
-            id: "prescription-check",
-            title: "처방점검",
-            url: "https://www.notion.so/0051f915cdf083c1aa73810085450e09",
-          },
-          {
-            id: "insurance-claim",
-            title: "보험청구",
-            url: "https://www.notion.so/1ce1f915cdf0826db8978162a514694a",
-          },
-          {
-            id: "simple-sales",
-            title: "단순판매",
-            url: "https://www.notion.so/0761f915cdf083a0857901c91a13813a",
-          },
-          {
-            id: "consulting-statistics",
-            title: "컨설팅통계",
-            url: "https://www.notion.so/da01f915cdf082758d4b819eeb7d4c02",
-          },
-          {
-            id: "inventory-management",
-            title: "재고관리",
-            url: "https://www.notion.so/1611f915cdf08320919b013cbd77036a",
-          },
-          {
-            id: "customer-management",
-            title: "고객관리",
-            url: "https://www.notion.so/d0f1f915cdf082e7bc50014abebf37ff",
-          },
-          {
-            id: "medication-counseling",
-            title: "복약지도실",
-            url: "https://www.notion.so/1691f915cdf0822aa7d901d55320d5ce",
-          },
-          {
-            id: "payment",
-            title: "수납",
-            url: "https://www.notion.so/6cc1f915cdf0832ea4a9811ed97f5b43",
-          },
-          {
-            id: "diabetes-support",
-            title: "당뇨 소모성 재료요양비 지원",
-            url: "https://www.notion.so/d611f915cdf0839bb9d481fc48f7ad89",
-          },
-          {
-            id: "narcotics-system",
-            title: "마약류통합관리시스템",
-            url: "https://www.notion.so/59d1f915cdf0821dbdd301d8d6dafd89",
-          },
-          {
-            id: "auto-purchase",
-            title: "자동사입(3초입고)",
-            url: "https://www.notion.so/3-f911f915cdf0833ea1a681d2e71c974f",
-          },
-          {
-            id: "printer",
-            title: "프린터",
-            url: "https://www.notion.so/00e1f915cdf083128e648142a60a7dc3",
-          },
-          {
-            id: "label",
-            title: "라벨",
-            url: "https://www.notion.so/21c1f915cdf08371bfa6016e51440dbf",
-          },
-          {
-            id: "settings",
-            title: "환경설정",
-            url: "https://www.notion.so/e5b1f915cdf0824ca20901eb9ae04e7e",
-          },
-          {
-            id: "update",
-            title: "업데이트",
-            url: "https://www.notion.so/c291f915cdf082cd963001c3f4ef9ff5",
-          },
-          {
-            id: "database",
-            title: "DB",
-            url: "https://www.notion.so/DB-eca1f915cdf082918fc70105a19bc644",
-          },
-          {
-            id: "content-management",
-            title: "컨텐츠관리",
-            url: "https://www.notion.so/4751f915cdf082afb437010736e199c2",
-          },
-          {
-            id: "barcode-2d",
-            title: "2D바코드 관련",
-            url: "https://www.notion.so/2D-2411f915cdf083ea9af6815b7ad2cc08",
-          },
-          {
-            id: "scanner",
-            title: "스캐너(Scanner)",
-            url: "https://www.notion.so/Scanner-05e1f915cdf08391ae420137a53c8bda",
-          },
-          {
-            id: "medicine-management",
-            title: "약품관리",
-            url: "https://www.notion.so/a2c1f915cdf083cc857c812ff889da57",
-          },
-          {
-            id: "firewall-sub-pc",
-            title: "방화벽 설정 후 보조PC 사용방법",
-            url: "https://www.notion.so/PC-test-af41f915cdf082f2bfaf010d989f88b0",
-          },
-          {
-            id: "van-plus-process",
-            title: "VAN Plus",
-            url: "https://www.notion.so/VAN-Plus-fbe1f915cdf0838bb5ad016165c5c443",
-          },
-          {
-            id: "upharm-pos-process",
-            title: "유팜포스",
-            url: "https://www.notion.so/3ce1f915cdf0823194b701430a3c1cbb",
-          },
-          {
-            id: "general-terminal",
-            title: "일반 단말기(밴)",
-            url: "https://www.notion.so/0f21f915cdf0838bbf298146c9d2507c",
-          },
-          {
-            id: "sql-query",
-            title: "쿼리문",
-            url: "https://www.notion.so/78c1f915cdf08391b8b601c99f1e9707",
-          },
-          {
-            id: "conversion-methods",
-            title: "컨버전 처리 방법 모음",
-            url: "https://www.notion.so/4ca1f915cdf082a284eb01a835e436d5",
-          },
-          {
-            id: "process-other",
-            title: "기타",
-            url: "https://www.notion.so/65c1f915cdf08358ba94016d15dd09f6",
-          },
-        ],
+        id: "prescription-dispensing",
+        title: "처방조제",
+        links: [{ id: "prescription-dispensing-link", title: "처방조제", url: "https://www.notion.so/87e1f915cdf083ca827e812ef3a5a3e0" }],
+      },
+      {
+        id: "prescription-check",
+        title: "처방점검",
+        links: [{ id: "prescription-check-link", title: "처방점검", url: "https://www.notion.so/0051f915cdf083c1aa73810085450e09" }],
+      },
+      {
+        id: "insurance-claim",
+        title: "보험청구",
+        links: [{ id: "insurance-claim-link", title: "보험청구", url: "https://www.notion.so/1ce1f915cdf0826db8978162a514694a" }],
+      },
+      {
+        id: "simple-sales",
+        title: "단순판매",
+        links: [{ id: "simple-sales-link", title: "단순판매", url: "https://www.notion.so/0761f915cdf083a0857901c91a13813a" }],
+      },
+      {
+        id: "consulting-statistics",
+        title: "컨설팅통계",
+        links: [{ id: "consulting-statistics-link", title: "컨설팅통계", url: "https://www.notion.so/da01f915cdf082758d4b819eeb7d4c02" }],
+      },
+      {
+        id: "inventory-management",
+        title: "재고관리",
+        links: [{ id: "inventory-management-link", title: "재고관리", url: "https://www.notion.so/1611f915cdf08320919b013cbd77036a" }],
+      },
+      {
+        id: "customer-management",
+        title: "고객관리",
+        links: [{ id: "customer-management-link", title: "고객관리", url: "https://www.notion.so/d0f1f915cdf082e7bc50014abebf37ff" }],
+      },
+      {
+        id: "medication-counseling",
+        title: "복약지도실",
+        links: [{ id: "medication-counseling-link", title: "복약지도실", url: "https://www.notion.so/1691f915cdf0822aa7d901d55320d5ce" }],
+      },
+      {
+        id: "payment",
+        title: "수납",
+        links: [{ id: "payment-link", title: "수납", url: "https://www.notion.so/6cc1f915cdf0832ea4a9811ed97f5b43" }],
+      },
+      {
+        id: "diabetes-support",
+        title: "당뇨 소모성 재료요양비 지원",
+        links: [{ id: "diabetes-support-link", title: "당뇨 소모성 재료요양비 지원", url: "https://www.notion.so/d611f915cdf0839bb9d481fc48f7ad89" }],
+      },
+      {
+        id: "narcotics-system",
+        title: "마약류통합관리시스템",
+        links: [{ id: "narcotics-system-link", title: "마약류통합관리시스템", url: "https://www.notion.so/59d1f915cdf0821dbdd301d8d6dafd89" }],
+      },
+      {
+        id: "auto-purchase",
+        title: "자동사입(3초입고)",
+        links: [{ id: "auto-purchase-link", title: "자동사입(3초입고)", url: "https://www.notion.so/3-f911f915cdf0833ea1a681d2e71c974f" }],
+      },
+      {
+        id: "printer",
+        title: "프린터",
+        links: [{ id: "printer-link", title: "프린터", url: "https://www.notion.so/00e1f915cdf083128e648142a60a7dc3" }],
+      },
+      {
+        id: "label",
+        title: "라벨",
+        links: [{ id: "label-link", title: "라벨", url: "https://www.notion.so/21c1f915cdf08371bfa6016e51440dbf" }],
+      },
+      {
+        id: "settings",
+        title: "환경설정",
+        links: [{ id: "settings-link", title: "환경설정", url: "https://www.notion.so/e5b1f915cdf0824ca20901eb9ae04e7e" }],
+      },
+      {
+        id: "update",
+        title: "업데이트",
+        links: [{ id: "update-link", title: "업데이트", url: "https://www.notion.so/c291f915cdf082cd963001c3f4ef9ff5" }],
+      },
+      {
+        id: "database",
+        title: "DB",
+        links: [{ id: "database-link", title: "DB", url: "https://www.notion.so/DB-eca1f915cdf082918fc70105a19bc644" }],
+      },
+      {
+        id: "content-management",
+        title: "컨텐츠관리",
+        links: [{ id: "content-management-link", title: "컨텐츠관리", url: "https://www.notion.so/4751f915cdf082afb437010736e199c2" }],
+      },
+      {
+        id: "barcode-2d",
+        title: "2D바코드 관련",
+        links: [{ id: "barcode-2d-link", title: "2D바코드 관련", url: "https://www.notion.so/2D-2411f915cdf083ea9af6815b7ad2cc08" }],
+      },
+      {
+        id: "scanner",
+        title: "스캐너(Scanner)",
+        links: [{ id: "scanner-link", title: "스캐너(Scanner)", url: "https://www.notion.so/Scanner-05e1f915cdf08391ae420137a53c8bda" }],
+      },
+      {
+        id: "medicine-management",
+        title: "약품관리",
+        links: [{ id: "medicine-management-link", title: "약품관리", url: "https://www.notion.so/a2c1f915cdf083cc857c812ff889da57" }],
+      },
+      {
+        id: "firewall-sub-pc",
+        title: "방화벽 설정 후 보조PC 사용방법",
+        links: [{ id: "firewall-sub-pc-link", title: "방화벽 설정 후 보조PC 사용방법", url: "https://www.notion.so/PC-test-af41f915cdf082f2bfaf010d989f88b0" }],
+      },
+      {
+        id: "van-plus-process",
+        title: "VAN Plus",
+        links: [{ id: "van-plus-process-link", title: "VAN Plus", url: "https://www.notion.so/VAN-Plus-fbe1f915cdf0838bb5ad016165c5c443" }],
+      },
+      {
+        id: "upharm-pos-process",
+        title: "유팜포스",
+        links: [{ id: "upharm-pos-process-link", title: "유팜포스", url: "https://www.notion.so/3ce1f915cdf0823194b701430a3c1cbb" }],
+      },
+      {
+        id: "general-terminal",
+        title: "일반 단말기(밴)",
+        links: [{ id: "general-terminal-link", title: "일반 단말기(밴)", url: "https://www.notion.so/0f21f915cdf0838bbf298146c9d2507c" }],
+      },
+      {
+        id: "sql-query",
+        title: "쿼리문",
+        links: [{ id: "sql-query-link", title: "쿼리문", url: "https://www.notion.so/78c1f915cdf08391b8b601c99f1e9707" }],
+      },
+      {
+        id: "conversion-methods",
+        title: "컨버전 처리 방법 모음",
+        links: [{ id: "conversion-methods-link", title: "컨버전 처리 방법 모음", url: "https://www.notion.so/4ca1f915cdf082a284eb01a835e436d5" }],
+      },
+      {
+        id: "process-other",
+        title: "기타",
+        links: [{ id: "process-other-link", title: "기타", url: "https://www.notion.so/65c1f915cdf08358ba94016d15dd09f6" }],
       },
     ],
   },
