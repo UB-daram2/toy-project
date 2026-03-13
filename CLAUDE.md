@@ -60,7 +60,7 @@ npm run lint          # ESLint 검사
 npx tsc --noEmit      # 타입 검사
 ```
 
-CI/CD: `.github/workflows/ci.yml` — push/PR 시 lint → type-check → test → build 순으로 자동 실행
+CI/CD: `.github/workflows/ci.yml` — push/PR 시 lint → type-check → test:coverage → build → E2E → deploy(master 전용) 순으로 자동 실행
 
 ## 아키텍처
 
@@ -159,16 +159,18 @@ src/hooks/usePomodoro.ts              ← 포모도로 타이머 커스텀 훅 (
 ## CI/CD 및 배포 전략
 
 ```
-push → main:
+push → master:
   1. lint (ESLint)
   2. type-check (tsc --noEmit)
   3. test:coverage (커버리지 90% 미달 시 실패)
   4. build (Next.js 프로덕션 빌드)
   5. E2E (Playwright chromium, build 재실행)
-  6. deploy → Vercel (main push + 모든 CI 통과 시)
+  6. deploy → Vercel (master push + 모든 CI 통과 시)
 ```
 
-**롤백 전략**: Vercel 배포 실패 시 Dashboard → Deployments에서 이전 빌드 Promote to Production으로 즉시 롤백 가능 (다운타임 없음). CI 실패 시 main push 자체가 차단되어 broken build는 프로덕션에 도달하지 않음.
+**GitHub Secrets 설정**: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` 등록 완료.
+
+**롤백 전략**: Vercel 배포 실패 시 Dashboard → Deployments에서 이전 빌드 Promote to Production으로 즉시 롤백 가능 (다운타임 없음). CI 실패 시 master push 자체가 차단되어 broken build는 프로덕션에 도달하지 않음.
 
 ## Notion API 마이그레이션 가이드
 

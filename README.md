@@ -139,15 +139,15 @@ Notion 구조 변경 시 앱을 재배포하면 자동으로 반영됩니다.
 
 ## CI/CD
 
-GitHub Actions (`.github/workflows/ci.yml`)를 통해 `main` 브랜치 push 및 PR 시 자동으로 실행됩니다.
+GitHub Actions (`.github/workflows/ci.yml`)를 통해 `master` 브랜치 push 및 PR 시 자동으로 실행됩니다.
 
 ```
 CI:  lint → type-check → test (coverage 90%+) → build
 E2E: E2E 스모크 테스트 (Playwright, build-and-test 완료 후 실행)
-CD:  Vercel 프로덕션 배포 (main push + CI/E2E 통과 시)
+CD:  Vercel 프로덕션 배포 (master push + CI/E2E 통과 시)
 ```
 
-CD 설정: GitHub 저장소 Secrets에 `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` 등록 필요.
+CD 설정: GitHub 저장소 Secrets에 `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` 등록 완료.
 
 ## 테스트
 
