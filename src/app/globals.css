@@ -26,6 +26,13 @@ body {
   color: var(--foreground);
 }
 
+/* 인터랙티브 요소 전환 효과 */
+button,
+a,
+input {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* 스크롤바 스타일 (라이트/다크 모드) */
 ::-webkit-scrollbar {
   width: 6px;

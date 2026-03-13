@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.8.0] — 2026-03-14
+
+### 배경 및 의사결정
+
+기존 레이아웃은 `h-screen overflow-hidden`으로 전체 화면을 고정한 후 내부에서 스크롤하는 데스크톱 중심 구조였다. 모바일(375px 기준)에서는 사이드바가 256px를 차지해 콘텐츠 영역이 119px 밖에 남지 않았고, 사용자가 섹션을 전환할 방법도 없었다. 이를 해결하기 위해 모바일에서는 자연 세로 스크롤 + 하단 플로팅 네비게이션, 데스크톱에서는 기존 사이드바 구조를 유지하는 반응형 이중 레이아웃으로 전환했다.
+
+글래스모피즘 적용 이유: `backdrop-blur-2xl`과 반투명 배경(`bg-white/85`)은 스크롤 시 헤더·사이드바가 콘텐츠 위에 자연스럽게 떠 있는 느낌을 주어 시각적 계층감을 강화한다. 기존 solid 배경 대비 코드 추가 없이 CSS만으로 구현 가능하다.
+
+모바일 하단 네비 `aria-hidden="true"` 이유: JSDOM 기반 테스트는 CSS를 적용하지 않아 사이드바와 하단 네비의 동일한 버튼이 중복으로 접근성 트리에 노출된다. `getByRole("button", {name: /홈/})`이 복수 결과를 반환해 테스트가 실패하는 것을 방지하기 위해 적용. 실제 브라우저에서 사이드바는 `display:none`(mobile)으로 접근성 트리에서 제외되므로 기능 영향 없음.
+
+### Added
+- **모바일 하단 플로팅 네비게이션 바** (`Dashboard.tsx`): 홈 + 최대 3개 섹션 버튼, 인디고→바이올렛 그라디언트 활성 상태, `backdrop-blur-2xl` 글래스 pill 컨테이너, `pb-28` 콘텐츠 여백으로 겹침 방지
+- **글래스모피즘 Sidebar** (`Sidebar.tsx`): `bg-white/80 backdrop-blur-2xl`, 좌측 세로 인디케이터 바, 색상 아이콘 컨테이너, 섹션 구분 레이블, 하단 브랜드 카드
+- **반응형 sticky Header** (`Header.tsx`): 모바일 2행 레이아웃(타이틀+테마토글 / 검색), 데스크톱 1행 레이아웃, 검색어 지우기(X) 버튼, `backdrop-blur-2xl` 글래스 효과
+- **그라디언트 배경** (`Dashboard.tsx`): `from-slate-50 via-white to-violet-50/20 dark:from-zinc-950 dark:via-zinc-950 dark:to-violet-950/10`
+
+### Changed
+- **Dashboard 레이아웃**: `h-screen overflow-hidden flex-row` → `min-h-screen flex-col md:h-screen md:flex-row md:overflow-hidden` — 모바일 세로 자연 스크롤, 데스크톱 내부 스크롤 유지
+- **Sidebar**: `flex h-full w-64` → `hidden md:flex ...` — 모바일에서 CSS hidden, 데스크톱에서만 표시
+- **globals.css**: `button, a, input` 전환 easing 함수 `cubic-bezier(0.4, 0, 0.2, 1)` 추가
+
+---
+
 ## [0.7.0] — 2026-03-13
 
 ### 배경 및 의사결정

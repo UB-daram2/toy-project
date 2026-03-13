@@ -82,8 +82,11 @@ CI/CD: `.github/workflows/ci.yml` — push/PR 시 lint → type-check → test:c
 ```
 src/app/page.tsx              ← Async Server Component: Notion에서 구조 로딩
        └─ Dashboard.tsx       ← Client Component: 상태 관리 (활성 섹션, 검색어)
-           ├─ Sidebar.tsx     ← 홈 + 섹션 네비게이션
-           ├─ Header.tsx      ← 검색 + 다크모드 토글
+                               모바일: min-h-screen flex-col + 하단 플로팅 네비
+                               데스크톱: h-screen flex-row overflow-hidden
+           ├─ Sidebar.tsx     ← 홈 + 섹션 네비게이션 (hidden md:flex, 글래스모피즘)
+           ├─ Header.tsx      ← 검색 + 다크모드 토글 (sticky, 글래스모피즘)
+                               모바일: 타이틀행 + 검색행 2행 / 데스크톱: 1행
            ├─ HomeView.tsx    ← 홈 위젯 11종 + 드래그앤드롭 재정렬
            └─ SectionView.tsx ← 카테고리 카드 그리드
                └─ CategoryCard.tsx ← 카드 (더 보기/접기, 모달 연동, 열람 수 기록)
