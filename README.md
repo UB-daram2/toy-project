@@ -2,6 +2,8 @@
 
 유팜시스템 고객 지원 지식베이스를 대시보드 스타일로 시각화하는 Next.js 앱입니다.
 
+[![CI](https://github.com/UB-daram2/toy-project/actions/workflows/ci.yml/badge.svg)](https://github.com/UB-daram2/toy-project/actions/workflows/ci.yml)
+
 ## 문제 정의 (PRD)
 
 ### 배경
@@ -41,7 +43,7 @@
 | Tailwind CSS | v4 | 빠른 UI 구현, 다크모드 지원 |
 | next-themes | 최신 | SSR-safe 다크모드 전환 |
 | lucide-react | 최신 | 일관된 아이콘 셋 |
-| Jest + React Testing Library | 최신 | 컴포넌트 단위 테스트 + 커버리지 강제 |
+| Jest + React Testing Library | 최신 | 142개 테스트, 커버리지 90%+ 강제 |
 
 ## 시작하기
 
@@ -55,7 +57,7 @@ npm run dev        # http://localhost:3000
 ```bash
 npm run dev            # 개발 서버 실행
 npm run build          # 프로덕션 빌드
-npm test               # 테스트 실행
+npm test               # 테스트 실행 (142개)
 npm run test:coverage  # 커버리지 리포트 (90% 이상 유지)
 npm run lint           # ESLint 검사
 ```
@@ -101,7 +103,7 @@ Notion 구조 변경 시 앱을 재배포하면 자동으로 반영됩니다.
 
 ## CI/CD
 
-GitHub Actions (`.github/workflows/ci.yml`)를 통해 `main` 브랜치 push 및 PR 시 자동으로 실행됩니다.
+GitHub Actions (`.github/workflows/ci.yml`)를 통해 `master` 브랜치 push 및 PR 시 자동으로 실행됩니다.
 
 ```
 lint → type-check → test (coverage 90%+) → build
@@ -110,8 +112,16 @@ lint → type-check → test (coverage 90%+) → build
 ## 테스트
 
 ```bash
-npm test                  # 전체 테스트
+npm test                  # 전체 테스트 (142개)
 npm run test:coverage     # 커버리지 (전역 90% 이상 강제)
 ```
 
-커버리지 기준 미달 시 빌드가 실패합니다 (`jest.config.ts` 참고).
+| 지표 | 수치 |
+|------|------|
+| 테스트 수 | 142개 |
+| 구문 커버리지 | 95.7% |
+| 브랜치 커버리지 | 90.6% |
+| 함수 커버리지 | 93.3% |
+| 라인 커버리지 | 97.8% |
+
+커버리지 기준 미달 시 CI가 실패합니다 (`jest.config.ts` 참고).
