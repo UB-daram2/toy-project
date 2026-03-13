@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.9.0] — 2026-03-14
+
+### 배경 및 의사결정
+
+이 버전에서는 세 가지 사용자 경험 문제를 해결했다.
+
+**1. 빈 Notion 페이지 안내**
+이미지·파일만 있는 Notion 페이지는 내부 단락이 `rich_text: []`로 반환되어 모달이 아무것도 표시하지 않았다. `hasVisibleContent` 계산 변수를 도입해 실제 렌더 가능한 콘텐츠가 있는 블록이 존재할 때만 내용을 표시하고, 없으면 "Notion에서 직접 확인해 주세요." 안내와 버튼을 표시한다.
+
+**2. 파일 첨부 블록 다운로드**
+Notion의 파일 첨부(`file` 블록)는 서버에서 `getSignedFileUrls` API를 호출해 서명된 URL을 받아야 다운로드 가능하다. API Route에서 `file` 블록 일괄 처리 후 서명 URL을 주입하고, PDF는 새 탭 보기, 나머지는 `download` 속성으로 직접 다운로드를 지원한다.
+
+**3. 신규 위젯 3종 추가**
+외부 API 의존 없이 즉시 활용 가능한 생산성 위젯 3종(Todo·계산기·디지털 시계)을 추가하고, 기본 위젯 순서를 업무 빈도 기준으로 재정렬했다. Zustand persist 스토어(`upharm_todos`)로 투두 목록을 영속화한다.
+
+### Added
+- **NotionModal 빈 페이지 안내** (`NotionModal.tsx`): `hasVisibleContent` 계산 변수로 실제 렌더 가능 콘텐츠 유무를 판별, 빈 경우 Notion 직접 열기 유도 UI 표시
+- **NotionModal 파일 블록 렌더링** (`NotionModal.tsx`, `api/notion/[pageId]/route.ts`): `file` 블록 파싱 + `getSignedFileUrls` 서버 일괄 처리 + PDF 새 탭 / 비-PDF 다운로드 링크 표시
+- **Todo 위젯** (`HomeView.tsx`, `todoStore.ts`): 할 일 추가·완료 토글·삭제, Zustand persist 스토어 `upharm_todos`, 최대 30개 제한
+- **계산기 위젯** (`HomeView.tsx`): 사칙연산 + 부호반전(±) + 백분율(%) + 소수점, 연속 연산 지원
+- **디지털 시계 위젯** (`HomeView.tsx`): `setInterval` 1초 갱신, SSR-safe `null` 초기 상태, 로컬 시각·날짜·요일 표시
+
+### Changed
+- **기본 위젯 순서** (`widgetStore.ts`): 업무 빈도 기준 재정렬 — 많이 본/최근 수정 1·2위 고정, 날씨 3위, 업무 도구(Todo·메모·시계·캘린더·D-Day), 빠른 도구(북마크·계산기·포모도로), 시장 정보(환율·증시·주간 날씨) 순
+- **`WidgetId` 타입** (`widgetStore.ts`): `"todo"` · `"calculator"` · `"clock"` 추가
+
+### Tests
+- 전체 테스트: 284개 → 315개 (전 항목 통과)
+- 브랜치 커버리지: 86.24% → 92.07% (90% 임계값 충족)
+- 신규 테스트 스위트: `todoStore.test.ts` (6개), NotionModal 파일 블록 테스트 3개, HomeView 계산기/시계/Todo 테스트 14개
+
+---
+
 ## [0.8.0] — 2026-03-14
 
 ### 배경 및 의사결정
@@ -18,6 +51,7 @@
 
 ### Added
 - **`deploy-preview` CI job** (`.github/workflows/ci.yml`): PR 이벤트 시 E2E 통과 후 Vercel 프리뷰 환경에 자동 배포 (스테이징). `--prod` 없이 실행하여 프로덕션과 분리된 고유 URL 생성 — 머지 전 실제 배포 환경 검증 가능
+- **NotionModal 빈 콘텐츠 Notion 링크 유도** (`NotionModal.tsx`): 블록이 없는 페이지(이미지·파일 전용 등)에서 "내용이 없습니다." 대신 "Notion에서 열기" 버튼 표시
 
 ### Changed
 - **Dashboard 레이아웃**: `h-screen overflow-hidden flex-row` → `min-h-screen flex-col md:h-screen md:flex-row md:overflow-hidden` — 모바일 세로 자연 스크롤, 데스크톱 내부 스크롤 유지

@@ -18,12 +18,23 @@ export type WidgetId =
   | "dday"
   | "bookmark"
   | "pomodoro"
-  | "weekly-weather";
+  | "weekly-weather"
+  | "todo"
+  | "calculator"
+  | "clock";
 
 /** 기본 위젯 순서 */
 export const DEFAULT_WIDGET_ORDER: WidgetId[] = [
-  "recent", "popular", "weather", "exchange", "market",
-  "memo", "calendar", "dday", "bookmark", "pomodoro", "weekly-weather",
+  // 지식베이스 탐색 (고정 1·2위)
+  "popular", "recent",
+  // 날씨 (3위 고정)
+  "weather",
+  // 업무 관리 (매일 사용)
+  "todo", "memo", "clock", "calendar", "dday",
+  // 빠른 도구
+  "bookmark", "calculator", "pomodoro",
+  // 시장·날씨 정보 (참고용)
+  "exchange", "market", "weekly-weather",
 ];
 
 /** 위젯 스토어 상태 및 액션 타입 */

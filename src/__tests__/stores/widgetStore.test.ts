@@ -19,10 +19,11 @@ describe("widgetStore — 초기 상태", () => {
 describe("widgetStore — reorder", () => {
   it("두 위젯의 순서를 교환한다", () => {
     const { reorder } = useWidgetStore.getState();
+    // popular(0) → recent(1) 위치로 이동: 결과는 [recent, popular, ...]
     reorder("popular", "recent");
     const { widgetOrder } = useWidgetStore.getState();
-    expect(widgetOrder[0]).toBe("popular");
-    expect(widgetOrder[1]).toBe("recent");
+    expect(widgetOrder[0]).toBe("recent");
+    expect(widgetOrder[1]).toBe("popular");
   });
 
   it("같은 위젯끼리 reorder하면 순서가 변하지 않는다", () => {
@@ -42,9 +43,9 @@ describe("widgetStore — reorder", () => {
 
 describe("widgetStore — reset", () => {
   it("reset 호출 시 기본 순서로 복원된다", () => {
-    // 먼저 순서를 변경한다
+    // 먼저 순서를 변경한다 (popular이 1번으로 밀려남)
     useWidgetStore.getState().reorder("popular", "recent");
-    expect(useWidgetStore.getState().widgetOrder[0]).toBe("popular");
+    expect(useWidgetStore.getState().widgetOrder[0]).toBe("recent");
 
     // reset 후 기본 순서로 돌아온다
     useWidgetStore.getState().reset();

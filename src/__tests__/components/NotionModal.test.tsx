@@ -138,7 +138,7 @@ describe("NotionModal", () => {
     });
   });
 
-  it("블록이 없으면 '내용이 없습니다' 메시지를 표시한다", async () => {
+  it("블록이 없으면 Notion 링크 유도 메시지와 버튼을 표시한다", async () => {
     mockFetchSuccess([]);
 
     render(
@@ -146,8 +146,11 @@ describe("NotionModal", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("내용이 없습니다.")).toBeInTheDocument();
+      expect(screen.getByText("이 페이지는 Notion에서 직접 확인해 주세요.")).toBeInTheDocument();
     });
+    // 빈 콘텐츠 영역의 Notion 열기 링크 (헤더 버튼과 별개)
+    const notionLinks = screen.getAllByRole("link", { name: /Notion에서 열기/ });
+    expect(notionLinks.length).toBeGreaterThanOrEqual(1);
   });
 
   it("닫기 버튼 클릭 시 onClose가 호출된다", () => {
@@ -229,6 +232,25 @@ describe("NotionModal", () => {
 
     await waitFor(() => {
       expect(container.querySelector("hr")).toBeInTheDocument();
+    });
+  });
+
+  it("완전히 알 수 없는 블록 타입은 렌더링을 생략하고 오류 없이 처리한다", async () => {
+    // 내용 있는 블록(hasVisibleContent=true) + 완전히 미지원 블록 타입 → default: return null 커버
+    mockFetchSuccess([
+      {
+        id: "block-para",
+        type: "paragraph",
+        paragraph: { rich_text: [{ plain_text: "내용", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }] },
+      },
+      { id: "block-xyz", type: "unknown_xyz", unknown_xyz: {} },
+    ]);
+
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+
+    await waitFor(() => {
+      // 알려진 블록은 렌더링되고, 미지원 블록은 조용히 생략된다
+      expect(screen.getByText("내용")).toBeInTheDocument();
     });
   });
 
@@ -480,7 +502,13 @@ describe("NotionModal", () => {
   });
 
   it("paragraph에 rich_text가 비어있으면 br 태그를 렌더링한다", async () => {
+    // 내용 있는 블록과 빈 블록이 함께 있을 때, 빈 단락은 br로 렌더링된다
     mockFetchSuccess([
+      {
+        id: "block-with-text",
+        type: "paragraph",
+        paragraph: { rich_text: [{ plain_text: "내용", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }] },
+      },
       {
         id: "block-empty-para",
         type: "paragraph",
@@ -660,8 +688,9 @@ describe("NotionModal", () => {
       expect(screen.queryByText("불러오는 중...")).not.toBeInTheDocument();
     });
 
-    // 내용은 없지만 에러도 없다 (blocks.length > 0이지만 모두 null 반환)
-    expect(screen.queryByText("내용이 없습니다.")).not.toBeInTheDocument();
+    // child_page는 rich_text가 없어 hasVisibleContent === false → Notion 링크 안내를 표시한다
+    expect(screen.getByText("이 페이지는 Notion에서 직접 확인해 주세요.")).toBeInTheDocument();
+    // 에러는 없다
     expect(screen.queryByText("에러")).not.toBeInTheDocument();
   });
 
@@ -764,6 +793,62 @@ describe("NotionModal", () => {
     // 서브페이지 제목이 헤더에 표시되고 뒤로가기 버튼이 나타난다
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "이전 페이지" })).toBeInTheDocument();
+    });
+  });
+
+  it("file 블록(PDF)은 새 탭 링크로 렌더링한다", async () => {
+    mockFetchSuccess([
+      {
+        id: "block-file-pdf",
+        type: "file",
+        file: { name: "manual.pdf", size: "512 KB", url: "https://s3.amazonaws.com/manual.pdf" },
+      },
+    ]);
+
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+
+    await waitFor(() => {
+      const link = screen.getByText("manual.pdf").closest("a");
+      // PDF는 새 탭으로 열린다
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    });
+  });
+
+  it("file 블록(비-PDF)은 다운로드 링크로 렌더링한다", async () => {
+    mockFetchSuccess([
+      {
+        id: "block-file-zip",
+        type: "file",
+        file: { name: "data.zip", size: "1.2 MB", url: "https://s3.amazonaws.com/data.zip" },
+      },
+    ]);
+
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+
+    await waitFor(() => {
+      const link = screen.getByText("data.zip").closest("a");
+      // 비-PDF 파일은 다운로드 속성을 가진다
+      expect(link).toHaveAttribute("download", "data.zip");
+    });
+  });
+
+  it("file 블록에 URL이 없으면 'Notion에서 열기' 안내를 표시한다", async () => {
+    mockFetchSuccess([
+      {
+        id: "block-file-no-url",
+        type: "file",
+        file: { name: "attachment.pdf", size: null, url: null },
+      },
+    ]);
+
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("attachment.pdf")).toBeInTheDocument();
+      // URL이 없으면 다운로드 링크 대신 안내 문구를 표시한다
+      const notionLinks = screen.getAllByText("Notion에서 열기");
+      expect(notionLinks.length).toBeGreaterThanOrEqual(1);
     });
   });
 

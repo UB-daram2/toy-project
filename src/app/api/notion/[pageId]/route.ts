@@ -23,6 +23,7 @@ interface NotionBlockValue {
     checked?: NotionSegment[];
     source?: NotionSegment[];
     language?: NotionSegment[];
+    size?: NotionSegment[];
   };
   format?: {
     display_source?: string;
@@ -90,6 +91,8 @@ const TYPE_MAP: Record<string, string> = {
   code: "code",
   callout: "callout",
   image: "image",
+  // 파일 첨부 블록 → 다운로드 카드로 변환 (signed URL 별도 획득 필요)
+  file: "file",
   // 서브페이지 참조 블록 → 클릭 가능한 내비게이션 링크로 변환
   page: "child_page",
   // 토글 블록 → 제목만 표시
@@ -153,6 +156,15 @@ function convertBlock(id: string, blockValue: NotionBlockValue): ConvertedBlock 
         : {};
       break;
     }
+    case "file":
+      // 파일 첨부 블록 → 파일명·크기·source 저장 (route handler에서 signed URL로 교체)
+      block[officialType] = {
+        name: properties?.title?.[0]?.[0] ?? "파일",
+        size: properties?.size?.[0]?.[0] ?? null,
+        source: properties?.source?.[0]?.[0] ?? null,
+        url: null as string | null,
+      };
+      break;
     case "child_page":
       // 서브페이지 블록 → 모달 내 내비게이션 링크로 사용할 URL 포함
       block[officialType] = {
@@ -204,12 +216,47 @@ export async function GET(
     const contentIds: string[] = pageBlock?.content ?? [];
 
     // 자식 블록을 공식 API 형식으로 변환 (지원하지 않는 타입은 제외)
-    const blocks = contentIds
-      .map((id) => {
-        const blockValue = blockMap[id]?.value;
-        return blockValue ? convertBlock(id, blockValue) : null;
-      })
-      .filter(Boolean);
+    const blocks = (
+      contentIds
+        .map((id) => {
+          const blockValue = blockMap[id]?.value;
+          return blockValue ? convertBlock(id, blockValue) : null;
+        })
+        .filter(Boolean) as ConvertedBlock[]
+    );
+
+    // 파일 블록의 attachment: URL → Notion signed URL로 교체 (직접 다운로드 가능하도록)
+    const fileBlocks = blocks.filter(
+      (b) => b.type === "file" && (b.file as { source?: string })?.source
+    );
+    if (fileBlocks.length > 0) {
+      try {
+        const signedRes = await fetch("https://www.notion.so/api/v3/getSignedFileUrls", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            urls: fileBlocks.map((b) => ({
+              url: (b.file as { source: string }).source,
+              permissionRecord: { table: "block", id: b.id },
+            })),
+          }),
+        });
+        if (signedRes.ok) {
+          const { signedUrls } = await signedRes.json() as { signedUrls: string[] };
+          fileBlocks.forEach((b, i) => {
+            const fd = b.file as { url: string | null; source?: string };
+            fd.url = signedUrls[i] ?? null;
+            delete fd.source;
+          });
+        }
+      } catch {
+        // signed URL 획득 실패 시 url: null 유지 → 모달에서 Notion 링크로 안내
+      }
+      // 성공 여부와 무관하게 source 필드는 클라이언트에 노출하지 않음
+      fileBlocks.forEach((b) => {
+        delete (b.file as { source?: string }).source;
+      });
+    }
 
     // 브라우저 및 CDN에서 5분 캐싱, stale-while-revalidate 60초
     return NextResponse.json({ blocks }, {

@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState, useCallback } from "react";
-import { X, ExternalLink, Loader2, ChevronLeft, FileText, ChevronRight } from "lucide-react";
+import { X, ExternalLink, Loader2, ChevronLeft, FileText, ChevronRight, Download } from "lucide-react";
 import { extractPageIdFromUrl } from "@/lib/utils";
 
 /** Notion Rich Text 항목 타입 */
@@ -214,6 +214,40 @@ function NotionBlockRenderer({
         </details>
       );
 
+    case "file": {
+      // 파일 첨부 블록 → signed URL이 있으면 다운로드, 없으면 Notion 페이지로 유도
+      const fileData = data as unknown as { name: string; size: string | null; url: string | null };
+      const ext = fileData.name.split(".").pop()?.toLowerCase() ?? "";
+      const isPdf = ext === "pdf";
+      // PDF는 새 탭에서 보기, 나머지는 다운로드
+      const linkProps = isPdf
+        ? { target: "_blank" as const, rel: "noopener noreferrer" }
+        : { download: fileData.name };
+      return fileData.url ? (
+        <a
+          href={fileData.url}
+          {...linkProps}
+          className="mb-2 flex w-full items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        >
+          <Download className="h-4 w-4 flex-shrink-0 text-gray-400 dark:text-zinc-500" />
+          <span className="flex-1 text-sm text-gray-700 dark:text-zinc-300">{fileData.name}</span>
+          {fileData.size && (
+            <span className="text-xs text-gray-400 dark:text-zinc-500">{fileData.size}</span>
+          )}
+        </a>
+      ) : (
+        // signed URL 획득 실패 시 → 파일명은 표시하되 Notion에서 직접 열도록 안내
+        <div className="mb-2 flex w-full items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 opacity-60 dark:border-zinc-700">
+          <Download className="h-4 w-4 flex-shrink-0 text-gray-400 dark:text-zinc-500" />
+          <span className="flex-1 text-sm text-gray-700 dark:text-zinc-300">{fileData.name}</span>
+          {fileData.size && (
+            <span className="text-xs text-gray-400 dark:text-zinc-500">{fileData.size}</span>
+          )}
+          <span className="text-xs text-gray-400 dark:text-zinc-500">Notion에서 열기</span>
+        </div>
+      );
+    }
+
     case "child_page": {
       // 서브페이지 블록 → 클릭 시 모달 내에서 해당 페이지로 이동
       const pageUrl = data.url as string;
@@ -237,6 +271,7 @@ function NotionBlockRenderer({
   }
 }
 
+
 interface NotionModalProps {
   pageUrl: string;
   pageTitle: string;
@@ -256,6 +291,19 @@ export function NotionModal({ pageUrl, pageTitle, onClose }: NotionModalProps) {
   // 현재 표시 중인 페이지
   const currentPage = pageStack[pageStack.length - 1];
   const canGoBack = pageStack.length > 1;
+
+  // 실제로 보이는 콘텐츠가 하나라도 있는지 판단
+  // divider·image·file은 rich_text 없이도 가시적, 나머지는 rich_text가 1개 이상이어야 보임
+  const hasVisibleContent = blocks.some((b) => {
+    if (b.type === "divider") return true;
+    if (b.type === "file") return true;
+    if (b.type === "image") {
+      const d = b[b.type] as { file?: { url: string }; external?: { url: string } };
+      return !!(d?.file?.url ?? d?.external?.url);
+    }
+    const d = b[b.type] as { rich_text?: unknown[] };
+    return (d?.rich_text?.length ?? 0) > 0;
+  });
 
   // 서브페이지로 이동 (스택에 추가)
   const navigateTo = useCallback((entry: PageEntry) => {
@@ -374,13 +422,25 @@ export function NotionModal({ pageUrl, pageTitle, onClose }: NotionModalProps) {
             </div>
           )}
 
-          {!isLoading && !error && blocks.length === 0 && (
-            <div className="flex items-center justify-center py-16 text-sm text-gray-400 dark:text-zinc-500">
-              내용이 없습니다.
+          {/* 보이는 콘텐츠가 없는 경우 Notion 링크로 유도 */}
+          {!isLoading && !error && !hasVisibleContent && (
+            <div className="flex flex-col items-center justify-center gap-4 py-16">
+              <p className="text-sm text-gray-400 dark:text-zinc-500">
+                이 페이지는 Notion에서 직접 확인해 주세요.
+              </p>
+              <a
+                href={currentPage.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Notion에서 열기
+              </a>
             </div>
           )}
 
-          {!isLoading && !error && blocks.length > 0 && (
+          {!isLoading && !error && hasVisibleContent && (
             <div>
               {blocks.map((block) => (
                 <NotionBlockRenderer

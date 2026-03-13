@@ -12,7 +12,7 @@ import {
   Clock, TrendingUp, Cloud, Wind, Droplets, RefreshCw,
   DollarSign, BarChart2, StickyNote, Plus, Trash2,
   Calendar, Bookmark, Timer, ChevronLeft, ChevronRight,
-  Flag, ExternalLink, X, GripVertical,
+  Flag, ExternalLink, X, GripVertical, ListTodo, Check, Calculator,
 } from "lucide-react";
 import type { KnowledgeSection, KnowledgeLink } from "@/data/knowledge-base";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ import { extractPageIdFromUrl } from "@/lib/utils";
 import { NotionModal } from "./NotionModal";
 import { useWidgetStore, type WidgetId } from "@/stores/widgetStore";
 import { useMemoStore } from "@/stores/memoStore";
+import { useTodoStore } from "@/stores/todoStore";
 import { useDDayStore } from "@/stores/ddayStore";
 import { useBookmarkStore } from "@/stores/bookmarkStore";
 import { usePomodoro } from "@/hooks/usePomodoro";
@@ -1146,6 +1147,266 @@ function WeeklyWeatherWidget() {
   );
 }
 
+/** ── 투두 리스트 위젯 ── */
+function TodoWidget() {
+  // 투두 상태는 Zustand 스토어가 관리한다 (persist 미들웨어로 localStorage 자동 영속화)
+  const { todos, addTodo: storeAddTodo, toggleTodo, removeTodo } = useTodoStore();
+  const [input, setInput] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const addTodo = () => {
+    storeAddTodo(input);
+    setInput("");
+    inputRef.current?.focus();
+  };
+
+  // 미완료/완료 개수 집계
+  const pending = todos.filter((t) => !t.completed).length;
+  const done = todos.filter((t) => t.completed).length;
+
+  return (
+    <WidgetCard
+      icon={<ListTodo className="h-4 w-4 text-white" />}
+      title="Todo"
+      iconColor="bg-teal-500"
+    >
+      {/* 입력창 */}
+      <div className="mb-3 flex gap-2">
+        <input
+          ref={inputRef}
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") addTodo(); }}
+          placeholder="할 일을 입력하세요..."
+          className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-teal-300 focus:ring-1 focus:ring-teal-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+        />
+        <button
+          onClick={addTodo}
+          aria-label="투두 추가"
+          className="flex-shrink-0 rounded-lg bg-teal-500 p-1.5 text-white transition-colors hover:bg-teal-600"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* 미완료/완료 개수 */}
+      {todos.length > 0 && (
+        <p className="mb-2 text-xs text-gray-400 dark:text-zinc-500">
+          {pending}개 남음 · {done}개 완료
+        </p>
+      )}
+
+      {/* 투두 목록 */}
+      {todos.length === 0 ? (
+        <p className="text-center text-xs text-gray-400 dark:text-zinc-500">
+          할 일이 없습니다
+        </p>
+      ) : (
+        <ul className="flex max-h-44 flex-col gap-1.5 overflow-y-auto">
+          {todos.map((todo) => (
+            <li
+              key={todo.id}
+              className="group flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-zinc-800"
+            >
+              {/* 체크 버튼: 완료 토글 */}
+              <button
+                onClick={() => toggleTodo(todo.id)}
+                aria-label={todo.completed ? "완료 취소" : "완료 표시"}
+                className={cn(
+                  "flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors",
+                  todo.completed
+                    ? "border-teal-500 bg-teal-500"
+                    : "border-gray-300 dark:border-zinc-600"
+                )}
+              >
+                {todo.completed && <Check className="h-3 w-3 text-white" />}
+              </button>
+              <p className={cn(
+                "flex-1 break-all text-sm",
+                todo.completed
+                  ? "text-gray-400 line-through dark:text-zinc-500"
+                  : "text-gray-700 dark:text-zinc-300"
+              )}>
+                {todo.text}
+              </p>
+              <button
+                onClick={() => removeTodo(todo.id)}
+                aria-label="삭제"
+                className="flex-shrink-0 text-gray-300 transition-colors hover:text-red-400 dark:text-zinc-600 dark:hover:text-red-400"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </WidgetCard>
+  );
+}
+
+/** 계산기가 지원하는 연산자 타입 — switch 완전 검사로 dead code 방지 */
+type CalcOp = "+" | "-" | "×" | "÷";
+
+/** ── 계산기 위젯 ── */
+function CalculatorWidget() {
+  const [display, setDisplay] = useState("0");
+  const [expression, setExpression] = useState("");
+  const [operator, setOperator] = useState<CalcOp | null>(null);
+  const [prevValue, setPrevValue] = useState<number | null>(null);
+  // 다음 입력이 기존 display를 덮어써야 하는지 여부
+  const [waitingForOperand, setWaitingForOperand] = useState(false);
+
+  // 두 피연산자와 연산자로 결과를 계산한다
+  // CalcOp 유니온을 switch로 완전 검사하므로 default 케이스가 불필요하다
+  const calculate = (a: number, op: CalcOp, b: number): number => {
+    switch (op) {
+      case "+": return a + b;
+      case "-": return a - b;
+      case "×": return a * b;
+      case "÷": return b !== 0 ? a / b : NaN;
+    }
+  };
+
+  const handleDigit = (digit: string) => {
+    if (waitingForOperand) {
+      setDisplay(digit);
+      setWaitingForOperand(false);
+    } else {
+      setDisplay(display === "0" ? digit : display + digit);
+    }
+  };
+
+  const handleDecimal = () => {
+    if (waitingForOperand) { setDisplay("0."); setWaitingForOperand(false); return; }
+    if (!display.includes(".")) setDisplay(display + ".");
+  };
+
+  const handleOperator = (op: CalcOp) => {
+    const current = parseFloat(display);
+    if (prevValue !== null && !waitingForOperand) {
+      const result = calculate(prevValue, operator!, current);
+      const resultStr = parseFloat(result.toFixed(10)).toString();
+      setDisplay(resultStr);
+      setPrevValue(parseFloat(resultStr));
+      setExpression(`${resultStr} ${op}`);
+    } else {
+      setPrevValue(current);
+      setExpression(`${display} ${op}`);
+    }
+    setOperator(op);
+    setWaitingForOperand(true);
+  };
+
+  const handleEquals = () => {
+    if (prevValue === null || operator === null) return;
+    const current = parseFloat(display);
+    const result = calculate(prevValue, operator, current);
+    const resultStr = Number.isNaN(result) ? "오류" : parseFloat(result.toFixed(10)).toString();
+    setExpression(`${prevValue} ${operator} ${display} =`);
+    setDisplay(resultStr);
+    setPrevValue(null);
+    setOperator(null);
+    setWaitingForOperand(true);
+  };
+
+  const handleClear = () => {
+    setDisplay("0"); setExpression(""); setOperator(null);
+    setPrevValue(null); setWaitingForOperand(false);
+  };
+
+  const handlePlusMinus = () => {
+    if (display !== "0") setDisplay((parseFloat(display) * -1).toString());
+  };
+
+  const handlePercent = () => {
+    setDisplay((parseFloat(display) / 100).toString());
+  };
+
+  // 버튼 공통 스타일
+  const btn = "flex items-center justify-center rounded-xl p-2.5 text-sm font-medium transition-colors active:scale-95";
+  const btnNum = `${btn} bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600`;
+  const btnOp = `${btn} bg-amber-400 text-white hover:bg-amber-500`;
+  const btnFn = `${btn} bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-500`;
+
+  return (
+    <WidgetCard
+      icon={<Calculator className="h-4 w-4 text-white" />}
+      title="계산기"
+      iconColor="bg-slate-600"
+    >
+      {/* 디스플레이 */}
+      <div className="mb-3 rounded-xl bg-gray-50 px-4 py-3 dark:bg-zinc-800">
+        <p className="h-4 text-right text-xs text-gray-400 dark:text-zinc-500">{expression}</p>
+        <p className="mt-1 truncate text-right font-mono text-2xl font-bold text-gray-900 dark:text-zinc-100">
+          {display}
+        </p>
+      </div>
+
+      {/* 버튼 그리드 (4열 5행) */}
+      <div className="grid grid-cols-4 gap-1.5">
+        <button onClick={handleClear} className={btnFn}>C</button>
+        <button onClick={handlePlusMinus} className={btnFn}>±</button>
+        <button onClick={handlePercent} className={btnFn}>%</button>
+        <button onClick={() => handleOperator("÷")} className={btnOp}>÷</button>
+
+        <button onClick={() => handleDigit("7")} className={btnNum}>7</button>
+        <button onClick={() => handleDigit("8")} className={btnNum}>8</button>
+        <button onClick={() => handleDigit("9")} className={btnNum}>9</button>
+        <button onClick={() => handleOperator("×")} className={btnOp}>×</button>
+
+        <button onClick={() => handleDigit("4")} className={btnNum}>4</button>
+        <button onClick={() => handleDigit("5")} className={btnNum}>5</button>
+        <button onClick={() => handleDigit("6")} className={btnNum}>6</button>
+        <button onClick={() => handleOperator("-")} className={btnOp}>-</button>
+
+        <button onClick={() => handleDigit("1")} className={btnNum}>1</button>
+        <button onClick={() => handleDigit("2")} className={btnNum}>2</button>
+        <button onClick={() => handleDigit("3")} className={btnNum}>3</button>
+        <button onClick={() => handleOperator("+")} className={btnOp}>+</button>
+
+        <button onClick={() => handleDigit("0")} className={`${btnNum} col-span-2`}>0</button>
+        <button onClick={handleDecimal} className={btnNum}>.</button>
+        <button onClick={handleEquals} className={`${btn} bg-teal-500 text-white hover:bg-teal-600`}>=</button>
+      </div>
+    </WidgetCard>
+  );
+}
+
+/** ── 디지털 시계 위젯 ── */
+function ClockWidget() {
+  // SSR 하이드레이션 불일치 방지: 마운트 후에만 시각을 표시한다
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    // setInterval 콜백은 effect 내부 직접 호출이 아니므로 lint 규칙 적용 제외
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const timeStr = now
+    ? now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })
+    : "--:--:--";
+  const dateStr = now
+    ? now.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" })
+    : "";
+
+  return (
+    <WidgetCard
+      icon={<Clock className="h-4 w-4 text-white" />}
+      title="디지털 시계"
+      iconColor="bg-violet-500"
+    >
+      <div className="flex flex-col items-center gap-2 py-4">
+        <p className="font-mono text-4xl font-bold tabular-nums text-gray-900 dark:text-zinc-100">
+          {timeStr}
+        </p>
+        <p className="text-sm text-gray-500 dark:text-zinc-400">{dateStr}</p>
+      </div>
+    </WidgetCard>
+  );
+}
+
 /** ── 위젯 순서 관리 — useWidgetStore (Zustand) 로 위임됨 ── */
 
 /** ── 홈 메인 뷰 ── */
@@ -1245,6 +1506,9 @@ export function HomeView({ sections }: HomeViewProps) {
       case "bookmark":      return <BookmarkWidget />;
       case "pomodoro":      return <PomodoroWidget />;
       case "weekly-weather": return <WeeklyWeatherWidget />;
+      case "todo":          return <TodoWidget />;
+      case "calculator":    return <CalculatorWidget />;
+      case "clock":         return <ClockWidget />;
     }
   };
 

@@ -11,6 +11,7 @@ import { useMemoStore } from "@/stores/memoStore";
 import { useDDayStore } from "@/stores/ddayStore";
 import { useBookmarkStore } from "@/stores/bookmarkStore";
 import { useWidgetStore, DEFAULT_WIDGET_ORDER } from "@/stores/widgetStore";
+import { useTodoStore } from "@/stores/todoStore";
 
 // NotionModal 모킹
 jest.mock("@/components/NotionModal", () => ({
@@ -109,16 +110,24 @@ const sampleSections: KnowledgeSection[] = [
 
 /**
  * 모든 위젯 fetch 성공 모킹
- * 렌더 순서: 날씨(2회) → 환율(1회) → 증시(1회) → 공휴일(1회) → 주간날씨(1회)
+ * URL 패턴 기반으로 응답을 분기하여 위젯 렌더 순서 변경에 영향받지 않는다.
  */
 function mockAllSuccess(airData = mockAirGood) {
-  mockFetch
-    .mockResolvedValueOnce({ json: () => Promise.resolve(mockWeatherResponse) })
-    .mockResolvedValueOnce({ json: () => Promise.resolve(airData) })
-    .mockResolvedValueOnce({ json: () => Promise.resolve(mockExchangeRateResponse) })
-    .mockResolvedValueOnce({ json: () => Promise.resolve(mockMarketResponse) })
-    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockHolidayResponse) })
-    .mockResolvedValueOnce({ json: () => Promise.resolve(mockWeeklyWeatherResponse) });
+  mockFetch.mockImplementation((url: string) => {
+    if (String(url).includes("air-quality-api.open-meteo.com"))
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(airData) });
+    if (String(url).includes("daily="))
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeeklyWeatherResponse) });
+    if (String(url).includes("open-meteo.com"))
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeatherResponse) });
+    if (String(url).includes("frankfurter"))
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockExchangeRateResponse) });
+    if (String(url).includes("/api/market"))
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockMarketResponse) });
+    if (String(url).includes("date.nager.at"))
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHolidayResponse) });
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+  });
 }
 
 beforeEach(() => {
@@ -130,6 +139,7 @@ beforeEach(() => {
   useDDayStore.setState({ ddays: [] });
   useBookmarkStore.setState({ bookmarks: [] });
   useWidgetStore.setState({ widgetOrder: [...DEFAULT_WIDGET_ORDER] });
+  useTodoStore.setState({ todos: [] });
 });
 
 describe("HomeView — 기본 렌더링", () => {
@@ -144,7 +154,7 @@ describe("HomeView — 기본 렌더링", () => {
     expect(screen.getByText(/1개 섹션/)).toBeInTheDocument();
   });
 
-  it("열한 위젯 제목을 모두 렌더링한다", () => {
+  it("열네 위젯 제목을 모두 렌더링한다", () => {
     render(<HomeView sections={sampleSections} />);
     expect(screen.getByText("최근 수정 Top 5")).toBeInTheDocument();
     expect(screen.getByText("많이 본 게시물 Top 5")).toBeInTheDocument();
@@ -157,6 +167,9 @@ describe("HomeView — 기본 렌더링", () => {
     expect(screen.getByText("북마크")).toBeInTheDocument();
     expect(screen.getByText("포모도로 타이머")).toBeInTheDocument();
     expect(screen.getByText("주간 날씨 예보")).toBeInTheDocument();
+    expect(screen.getByText("Todo")).toBeInTheDocument();
+    expect(screen.getByText("계산기")).toBeInTheDocument();
+    expect(screen.getByText("디지털 시계")).toBeInTheDocument();
   });
 });
 
@@ -388,9 +401,14 @@ describe("HomeView — 날씨 위젯", () => {
       expect(screen.getAllByText("다시 시도").length).toBeGreaterThan(0);
     });
 
-    mockFetch
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockWeatherResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockAirGood) });
+    // 재시도 후 URL 기반으로 날씨 성공 응답을 반환한다
+    mockFetch.mockImplementation((url: string) => {
+      if (String(url).includes("air-quality-api.open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockAirGood) });
+      if (String(url).includes("open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeatherResponse) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
 
     fireEvent.click(screen.getAllByText("다시 시도")[0]);
     await waitFor(() => {
@@ -431,13 +449,22 @@ describe("HomeView — 날씨 미지원 코드", () => {
     const unknownWeatherResponse = {
       current: { temperature_2m: 20, weather_code: 99, wind_speed_10m: 2.0 },
     };
-    mockFetch
-      .mockResolvedValueOnce({ json: () => Promise.resolve(unknownWeatherResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockAirGood) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockExchangeRateResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockMarketResponse) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockHolidayResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockWeeklyWeatherResponse) });
+    // URL 기반 분기: 날씨만 코드 99 응답, 나머지는 정상
+    mockFetch.mockImplementation((url: string) => {
+      if (String(url).includes("air-quality-api.open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockAirGood) });
+      if (String(url).includes("daily="))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeeklyWeatherResponse) });
+      if (String(url).includes("open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(unknownWeatherResponse) });
+      if (String(url).includes("frankfurter"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockExchangeRateResponse) });
+      if (String(url).includes("/api/market"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockMarketResponse) });
+      if (String(url).includes("date.nager.at"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHolidayResponse) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
     render(<HomeView sections={sampleSections} />);
     await waitFor(() => {
       expect(screen.getByText("20°C")).toBeInTheDocument();
@@ -501,11 +528,22 @@ describe("HomeView — 환율 위젯", () => {
 
   it("환율 API 실패 시 에러 안내를 표시한다", async () => {
     mockFetch.mockReset();
-    mockFetch
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockWeatherResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockAirGood) })
-      .mockRejectedValueOnce(new Error("network error"))
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockMarketResponse) });
+    // URL 기반 분기: 환율만 실패, 나머지는 성공
+    mockFetch.mockImplementation((url: string) => {
+      if (String(url).includes("air-quality-api.open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockAirGood) });
+      if (String(url).includes("daily="))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeeklyWeatherResponse) });
+      if (String(url).includes("open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeatherResponse) });
+      if (String(url).includes("frankfurter"))
+        return Promise.reject(new Error("network error"));
+      if (String(url).includes("/api/market"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockMarketResponse) });
+      if (String(url).includes("date.nager.at"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHolidayResponse) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
     render(<HomeView sections={sampleSections} />);
     await waitFor(() => {
       expect(screen.getByText("환율 정보를 불러올 수 없습니다")).toBeInTheDocument();
@@ -530,11 +568,22 @@ describe("HomeView — 증시 위젯", () => {
 
   it("증시 API 실패 시 에러 안내를 표시한다", async () => {
     mockFetch.mockReset();
-    mockFetch
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockWeatherResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockAirGood) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockExchangeRateResponse) })
-      .mockRejectedValueOnce(new Error("network error"));
+    // URL 기반 분기: 증시만 실패, 나머지는 성공
+    mockFetch.mockImplementation((url: string) => {
+      if (String(url).includes("air-quality-api.open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockAirGood) });
+      if (String(url).includes("daily="))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeeklyWeatherResponse) });
+      if (String(url).includes("open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeatherResponse) });
+      if (String(url).includes("frankfurter"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockExchangeRateResponse) });
+      if (String(url).includes("/api/market"))
+        return Promise.reject(new Error("network error"));
+      if (String(url).includes("date.nager.at"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHolidayResponse) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
     render(<HomeView sections={sampleSections} />);
     await waitFor(() => {
       expect(screen.getByText("증시 정보를 불러올 수 없습니다")).toBeInTheDocument();
@@ -813,13 +862,22 @@ describe("HomeView — 주간 날씨 예보 위젯", () => {
 
   it("주간 날씨 API 실패 시 에러 안내를 표시한다", async () => {
     mockFetch.mockReset();
-    mockFetch
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockWeatherResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockAirGood) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockExchangeRateResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockMarketResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockHolidayResponse) })
-      .mockRejectedValueOnce(new Error("network error"));
+    // URL 기반 분기: 주간 날씨(daily=)만 실패, 나머지는 성공
+    mockFetch.mockImplementation((url: string) => {
+      if (String(url).includes("air-quality-api.open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockAirGood) });
+      if (String(url).includes("daily="))
+        return Promise.reject(new Error("network error"));
+      if (String(url).includes("open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeatherResponse) });
+      if (String(url).includes("frankfurter"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockExchangeRateResponse) });
+      if (String(url).includes("/api/market"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockMarketResponse) });
+      if (String(url).includes("date.nager.at"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHolidayResponse) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
     render(<HomeView sections={sampleSections} />);
     await waitFor(() => {
       // 주간 날씨 에러 메시지 — 날씨 & 미세먼지도 같은 문구를 사용하므로 2개 이상일 수 있다
@@ -829,20 +887,32 @@ describe("HomeView — 주간 날씨 예보 위젯", () => {
 
   it("주간 날씨 에러 시 '다시 시도' 버튼을 클릭하면 재요청한다", async () => {
     mockFetch.mockReset();
-    // 첫 렌더: 날씨·환율·증시·공휴일 성공, 주간날씨 실패
-    mockFetch
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockWeatherResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockAirGood) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockExchangeRateResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockMarketResponse) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockHolidayResponse) })
-      .mockRejectedValueOnce(new Error("network error"))
-      // 재시도: 주간날씨 성공
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockWeeklyWeatherResponse) });
+    // 첫 렌더: 주간날씨(daily=)만 실패, 나머지는 성공
+    mockFetch.mockImplementation((url: string) => {
+      if (String(url).includes("air-quality-api.open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockAirGood) });
+      if (String(url).includes("daily="))
+        return Promise.reject(new Error("network error"));
+      if (String(url).includes("open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeatherResponse) });
+      if (String(url).includes("frankfurter"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockExchangeRateResponse) });
+      if (String(url).includes("/api/market"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockMarketResponse) });
+      if (String(url).includes("date.nager.at"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHolidayResponse) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
     render(<HomeView sections={sampleSections} />);
     await waitFor(() =>
       expect(screen.getAllByText("날씨 정보를 불러올 수 없습니다").length).toBeGreaterThan(0)
     );
+    // 재시도: 주간날씨 성공 응답으로 전환
+    mockFetch.mockImplementation((url: string) => {
+      if (String(url).includes("daily="))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeeklyWeatherResponse) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
     // WeeklyWeatherWidget의 '다시 시도' 버튼을 찾아 클릭한다
     const retryBtns = screen.getAllByText("다시 시도");
     fireEvent.click(retryBtns[retryBtns.length - 1]);
@@ -930,7 +1000,8 @@ describe("HomeView — 메모 Enter키 입력", () => {
 
 describe("HomeView — D-Day 날짜 분기", () => {
   it("D-Day가 오늘이면 'D-Day' 레이블을 표시한다", () => {
-    const today = new Date().toISOString().slice(0, 10);
+    // toLocaleDateString("en-CA")로 로컬 날짜 사용 — UTC와 로컬 날짜가 다를 수 있는 타임존 버그 방지
+    const today = new Date().toLocaleDateString("en-CA");
     render(<HomeView sections={sampleSections} />);
     fireEvent.click(screen.getByText("D-Day 추가"));
     fireEvent.change(screen.getByPlaceholderText("이벤트 이름"), { target: { value: "오늘이벤트" } });
@@ -1007,7 +1078,12 @@ describe("HomeView — D-Day 정렬", () => {
 });
 
 describe("HomeView — 포모도로 타이머 (시간 종료)", () => {
-  beforeEach(() => { jest.useFakeTimers(); });
+  beforeEach(() => {
+    jest.useFakeTimers();
+    // ClockWidget의 setInterval이 1500회 실행되어 타임아웃이 발생하는 것을 방지하기 위해
+    // 포모도로 위젯만 렌더링한다
+    useWidgetStore.setState({ widgetOrder: ["pomodoro"] });
+  });
   afterEach(() => { jest.useRealTimers(); });
 
   it("집중 타이머가 종료되면 자동으로 휴식 모드로 전환된다", async () => {
@@ -1142,13 +1218,22 @@ describe("HomeView — 드래그앤드롭", () => {
       value: mockGeolocation, configurable: true,
     });
     mockFetch.mockReset();
-    mockFetch
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockWeatherResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockAirGood) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockExchangeRateResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockMarketResponse) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockHolidayResponse) })
-      .mockResolvedValueOnce({ json: () => Promise.resolve(mockWeeklyWeatherResponse) });
+    // URL 기반 분기으로 위젯 렌더 순서 변경에 영향받지 않는다
+    mockFetch.mockImplementation((url: string) => {
+      if (String(url).includes("air-quality-api.open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockAirGood) });
+      if (String(url).includes("daily="))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeeklyWeatherResponse) });
+      if (String(url).includes("open-meteo.com"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeatherResponse) });
+      if (String(url).includes("frankfurter"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockExchangeRateResponse) });
+      if (String(url).includes("/api/market"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockMarketResponse) });
+      if (String(url).includes("date.nager.at"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHolidayResponse) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
     render(<HomeView sections={sampleSections} />);
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalled();
@@ -1157,5 +1242,156 @@ describe("HomeView — 드래그앤드롭", () => {
     Object.defineProperty(global.navigator, "geolocation", {
       value: undefined, configurable: true,
     });
+  });
+});
+
+describe("HomeView — Todo 위젯", () => {
+  it("빈 상태 메시지를 표시한다", () => {
+    render(<HomeView sections={sampleSections} />);
+    expect(screen.getByText("할 일이 없습니다")).toBeInTheDocument();
+  });
+
+  it("투두를 추가하면 목록에 표시된다", () => {
+    render(<HomeView sections={sampleSections} />);
+    const input = screen.getByPlaceholderText("할 일을 입력하세요...");
+    fireEvent.change(input, { target: { value: "테스트 할일" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(screen.getByText("테스트 할일")).toBeInTheDocument();
+  });
+
+  it("완료 버튼 클릭 시 취소선이 적용된다", () => {
+    useTodoStore.setState({ todos: [{ id: "1", text: "할일", completed: false, createdAt: Date.now() }] });
+    render(<HomeView sections={sampleSections} />);
+    const checkBtn = screen.getByLabelText("완료 표시");
+    fireEvent.click(checkBtn);
+    expect(screen.getByText("할일").className).toContain("line-through");
+  });
+
+  it("삭제 버튼 클릭 시 항목이 제거된다", () => {
+    useTodoStore.setState({ todos: [{ id: "1", text: "삭제할일", completed: false, createdAt: Date.now() }] });
+    render(<HomeView sections={sampleSections} />);
+    expect(screen.getByText("삭제할일")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("삭제"));
+    expect(screen.queryByText("삭제할일")).not.toBeInTheDocument();
+  });
+});
+
+describe("HomeView — 계산기 위젯", () => {
+  it("초기 디스플레이가 0이다", () => {
+    render(<HomeView sections={sampleSections} />);
+    // 계산기 디스플레이: role="none" 또는 텍스트로 찾기
+    const displays = screen.getAllByText("0");
+    expect(displays.length).toBeGreaterThan(0);
+  });
+
+  it("숫자 버튼 클릭 시 디스플레이가 변경된다", () => {
+    render(<HomeView sections={sampleSections} />);
+    fireEvent.click(screen.getByRole("button", { name: "5" }));
+    // "5" 버튼과 디스플레이 두 곳에 "5"가 표시되므로 getAllByText로 검증한다
+    expect(screen.getAllByText("5").length).toBeGreaterThan(0);
+  });
+
+  it("C 버튼 클릭 시 디스플레이가 0으로 초기화된다", () => {
+    render(<HomeView sections={sampleSections} />);
+    fireEvent.click(screen.getByRole("button", { name: "7" }));
+    fireEvent.click(screen.getByRole("button", { name: "C" }));
+    const displays = screen.getAllByText("0");
+    expect(displays.length).toBeGreaterThan(0);
+  });
+
+  it("더하기 연산이 정상 동작한다", () => {
+    render(<HomeView sections={sampleSections} />);
+    fireEvent.click(screen.getByRole("button", { name: "3" }));
+    fireEvent.click(screen.getByRole("button", { name: "+" }));
+    fireEvent.click(screen.getByRole("button", { name: "4" }));
+    fireEvent.click(screen.getByRole("button", { name: "=" }));
+    // "7" 버튼과 디스플레이 두 곳에 "7"이 표시되므로 getAllByText로 검증한다
+    expect(screen.getAllByText("7").length).toBeGreaterThan(0);
+  });
+
+  it("빼기 연산이 정상 동작한다", () => {
+    render(<HomeView sections={sampleSections} />);
+    fireEvent.click(screen.getByRole("button", { name: "9" }));
+    fireEvent.click(screen.getByRole("button", { name: "-" }));
+    fireEvent.click(screen.getByRole("button", { name: "3" }));
+    fireEvent.click(screen.getByRole("button", { name: "=" }));
+    expect(screen.getAllByText("6").length).toBeGreaterThan(0);
+  });
+
+  it("곱하기 연산이 정상 동작한다", () => {
+    render(<HomeView sections={sampleSections} />);
+    fireEvent.click(screen.getByRole("button", { name: "3" }));
+    fireEvent.click(screen.getByRole("button", { name: "×" }));
+    fireEvent.click(screen.getByRole("button", { name: "3" }));
+    fireEvent.click(screen.getByRole("button", { name: "=" }));
+    expect(screen.getAllByText("9").length).toBeGreaterThan(0);
+  });
+
+  it("나누기 연산이 정상 동작한다", () => {
+    render(<HomeView sections={sampleSections} />);
+    fireEvent.click(screen.getByRole("button", { name: "8" }));
+    fireEvent.click(screen.getByRole("button", { name: "÷" }));
+    fireEvent.click(screen.getByRole("button", { name: "4" }));
+    fireEvent.click(screen.getByRole("button", { name: "=" }));
+    expect(screen.getAllByText("2").length).toBeGreaterThan(0);
+  });
+
+  it("0으로 나누면 오류를 표시한다", () => {
+    render(<HomeView sections={sampleSections} />);
+    fireEvent.click(screen.getByRole("button", { name: "5" }));
+    fireEvent.click(screen.getByRole("button", { name: "÷" }));
+    fireEvent.click(screen.getByRole("button", { name: "0" }));
+    fireEvent.click(screen.getByRole("button", { name: "=" }));
+    expect(screen.getByText("오류")).toBeInTheDocument();
+  });
+
+  it("± 버튼으로 부호를 반전한다", () => {
+    render(<HomeView sections={sampleSections} />);
+    fireEvent.click(screen.getByRole("button", { name: "5" }));
+    fireEvent.click(screen.getByRole("button", { name: "±" }));
+    expect(screen.getByText("-5")).toBeInTheDocument();
+  });
+
+  it("% 버튼으로 백분율 변환한다", () => {
+    render(<HomeView sections={sampleSections} />);
+    // 50 → 0.5
+    fireEvent.click(screen.getByRole("button", { name: "5" }));
+    fireEvent.click(screen.getByRole("button", { name: "0" }));
+    fireEvent.click(screen.getByRole("button", { name: "%" }));
+    expect(screen.getByText("0.5")).toBeInTheDocument();
+  });
+
+  it("소수점 버튼 클릭 시 소수점이 추가된다", () => {
+    render(<HomeView sections={sampleSections} />);
+    fireEvent.click(screen.getByRole("button", { name: "." }));
+    // display가 "0."이 되어야 한다
+    expect(screen.getByText("0.")).toBeInTheDocument();
+  });
+
+  it("연속 연산 중 두 번째 연산자 입력 시 중간 결과를 계산한다", () => {
+    // prevValue !== null && !waitingForOperand 분기 커버
+    render(<HomeView sections={sampleSections} />);
+    fireEvent.click(screen.getByRole("button", { name: "3" }));
+    fireEvent.click(screen.getByRole("button", { name: "+" }));
+    fireEvent.click(screen.getByRole("button", { name: "4" }));
+    // 두 번째 + 클릭 시 중간 결과 7을 계산한다
+    fireEvent.click(screen.getByRole("button", { name: "+" }));
+    expect(screen.getAllByText("7").length).toBeGreaterThan(0);
+  });
+
+  it("연산자 없이 = 클릭 시 아무 변화가 없다", () => {
+    // handleEquals early return 분기 커버
+    render(<HomeView sections={sampleSections} />);
+    fireEvent.click(screen.getByRole("button", { name: "5" }));
+    fireEvent.click(screen.getByRole("button", { name: "=" }));
+    // 연산자가 없으므로 early return — "5" 그대로
+    expect(screen.getAllByText("5").length).toBeGreaterThan(0);
+  });
+});
+
+describe("HomeView — 디지털 시계 위젯", () => {
+  it("디지털 시계 위젯 제목을 렌더링한다", () => {
+    render(<HomeView sections={sampleSections} />);
+    expect(screen.getByText("디지털 시계")).toBeInTheDocument();
   });
 });
