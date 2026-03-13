@@ -26,11 +26,11 @@
 ### 기능 명세
 
 - **동적 구조 로딩** — `기술지원` Notion 페이지에서 섹션 → 카테고리 → 링크 계층 자동 파싱
-- **Notion 콘텐츠 모달** — 카드 클릭 시 paragraph, heading, list, callout, image, toggle 등 블록 렌더링
+- **Notion 콘텐츠 모달** — 카드 클릭 시 paragraph, heading, list, callout, image, toggle, file 등 블록 렌더링 (파일 블록은 PDF 새 탭 보기 / 그 외 직접 다운로드)
 - **모달 내 페이지 내비게이션** — 중첩된 서브페이지 클릭 시 모달 내에서 이동, 뒤로가기 지원
 - **더 보기 / 접기** — 링크가 많은 카테고리 카드는 6개만 미리보기 후 확장
 - **전체 텍스트 검색** — 섹션 / 카테고리 / 문서 이름으로 실시간 필터링
-- **홈 대시보드 위젯 (11종)**
+- **홈 대시보드 위젯 (14종)**
   - 최근 수정 게시물 Top 5 (Notion `last_edited_time` 기반)
   - 많이 본 게시물 Top 5 (localStorage 열람 수 집계)
   - 현재 날씨 & 미세먼지 (Open-Meteo API, 위치 기반)
@@ -42,6 +42,9 @@
   - 북마크 (Zustand persist 영속화, 자동 https:// 추가)
   - 포모도로 타이머 (집중 25분 / 휴식 5분, 자동 모드 전환)
   - 주간 날씨 예보 (Open-Meteo 7일 예보, 위치 기반)
+  - Todo (Zustand persist 영속화, 완료 토글·삭제, 최대 30개)
+  - 계산기 (사칙연산 + 부호반전 · 백분율 · 소수점, 연속 연산 지원)
+  - 디지털 시계 (초 단위 갱신, 로컬 시각·날짜·요일 표시)
 - **드래그앤드롭 위젯 재정렬** — HTML5 DnD (마우스) + Pointer Events API (터치), Zustand persist로 순서 저장
 - **균일 카드 레이아웃** — CSS Grid `auto-rows-[300px]`로 모든 카드 높이 고정, 내용 오버플로 시 스크롤
 - **다크모드** — `next-themes` 기반 라이트 / 다크 토글
@@ -93,8 +96,8 @@
 | Tailwind CSS | v4 | 빠른 UI 구현, 다크모드, `auto-rows-[300px]` 그리드 레이아웃 |
 | next-themes | 최신 | SSR-safe 다크모드 전환 |
 | lucide-react | 최신 | 일관된 아이콘 셋 |
-| Zustand | 최신 | 위젯 순서·메모·D-Day·북마크 상태 persist (localStorage 자동 영속화, SSR-safe) |
-| Jest + React Testing Library | 최신 | 284개 테스트 (API Route 포함), 커버리지 99%+, 90% 강제 |
+| Zustand | 최신 | 위젯 순서·메모·D-Day·북마크·투두 상태 persist (localStorage 자동 영속화, SSR-safe) |
+| Jest + React Testing Library | 최신 | 315개 테스트 (API Route 포함), 브랜치 커버리지 92%+, 90% 강제 |
 | Playwright | 최신 | E2E 스모크 테스트 (홈 로딩, 내비게이션, 검색) |
 
 ### 외부 API 의존성 및 안정성 평가
@@ -115,10 +118,11 @@
 
 | 기능 | 저장 키 | 저장 내용 | 최대 용량 |
 |------|---------|-----------|----------|
-| 위젯 순서 | `upharm_widget_order` | 위젯 ID 배열 (드래그앤드롭 결과) | 11개 ID |
+| 위젯 순서 | `upharm_widget_order` | 위젯 ID 배열 (드래그앤드롭 결과) | 14개 ID |
 | 메모 | `upharm_memos` | `{id, content, createdAt}[]` | 최대 20개 |
 | D-Day | `upharm_ddays` | `{id, name, date}[]` (날짜 오름차순) | 제한 없음 |
 | 북마크 | `upharm_bookmarks` | `{id, name, url}[]` | 제한 없음 |
+| 투두 | `upharm_todos` | `{id, text, completed, createdAt}[]` | 최대 30개 |
 
 **데이터 초기화**: 브라우저 개발자 도구 → Application → Local Storage에서 위 키를 삭제하면 초기화된다.
 
@@ -136,7 +140,7 @@ npm run dev        # http://localhost:3000
 ```bash
 npm run dev            # 개발 서버 실행
 npm run build          # 프로덕션 빌드
-npm test               # 테스트 실행 (284개)
+npm test               # 테스트 실행 (315개)
 npm run test:coverage  # 커버리지 리포트 (90% 이상 유지)
 npm run test:e2e       # E2E 스모크 테스트 (Playwright)
 npm run lint           # ESLint 검사
@@ -157,7 +161,7 @@ src/
 │   ├── CategoryCard.tsx               # 카테고리 카드 (더 보기 / 모달 연동 / 열람 수 기록)
 │   ├── Dashboard.tsx                  # 상태 관리 루트 컴포넌트
 │   ├── Header.tsx                     # 검색 + 다크모드 토글
-│   ├── HomeView.tsx                   # 홈 위젯 11종 + 드래그앤드롭 재정렬
+│   ├── HomeView.tsx                   # 홈 위젯 14종 + 드래그앤드롭 재정렬
 │   ├── NotionModal.tsx                # 블록 렌더러 + 페이지 내비게이션
 │   ├── SectionView.tsx                # 섹션 카드 그리드
 │   └── Sidebar.tsx                    # 홈 + 섹션 네비게이션
@@ -167,7 +171,8 @@ src/
 │   ├── widgetStore.ts                 # Zustand persist — 위젯 순서 (DnD)
 │   ├── memoStore.ts                   # Zustand persist — 메모 목록 (최대 20개)
 │   ├── ddayStore.ts                   # Zustand persist — D-Day 목록 (날짜 오름차순)
-│   └── bookmarkStore.ts               # Zustand persist — 북마크 목록
+│   ├── bookmarkStore.ts               # Zustand persist — 북마크 목록
+│   └── todoStore.ts                   # Zustand persist — 투두 목록 (최대 30개)
 ├── hooks/
 │   └── usePomodoro.ts                 # 포모도로 타이머 커스텀 훅
 └── lib/
@@ -205,7 +210,7 @@ push / PR
   ├─ npm audit    — 알려진 보안 취약점 검출 (high 이상 시 실패)
   ├─ ESLint       — 코드 품질 정적 분석
   ├─ tsc --noEmit — 런타임 전 타입 오류 검출
-  ├─ test:coverage — Jest 284개 + 커버리지 90% 미달 시 실패
+  ├─ test:coverage — Jest 315개 + 커버리지 90% 미달 시 실패
   └─ build        — Next.js 프로덕션 빌드 성공 여부 확인
   │
   ▼ (build-and-test 통과 시)
@@ -241,17 +246,17 @@ CD 설정: GitHub 저장소 Secrets에 `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_
 ## 테스트
 
 ```bash
-npm test                  # 전체 테스트 (284개)
+npm test                  # 전체 테스트 (315개)
 npm run test:coverage     # 커버리지 (전역 90% 이상 강제)
 ```
 
 | 지표 | 수치 |
 |------|------|
-| 테스트 수 | 284개 (API Route 포함) |
-| 구문 커버리지 | 99.1% |
-| 브랜치 커버리지 | 95.9% |
-| 함수 커버리지 | 100% |
-| 라인 커버리지 | 99.8% |
+| 테스트 수 | 315개 (API Route 포함) |
+| 구문 커버리지 | 97.96% |
+| 브랜치 커버리지 | 92.07% |
+| 함수 커버리지 | 97.61% |
+| 라인 커버리지 | 98.91% |
 
 커버리지 기준 미달 시 CI가 실패합니다 (`jest.config.ts` 참고).
 
