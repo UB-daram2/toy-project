@@ -77,8 +77,8 @@ jobs:
     name: Deploy to Vercel
     needs: [build-and-test, e2e]
     runs-on: ubuntu-latest
-    # main 브랜치 push 시에만 배포 (PR은 배포 제외)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # master 브랜치 push 시에만 배포 (PR은 배포 제외)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     steps:
       - name: Checkout repository
