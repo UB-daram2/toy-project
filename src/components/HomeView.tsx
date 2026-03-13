@@ -162,23 +162,30 @@ const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"];
 function WidgetCard({
   icon,
   title,
-  iconColor,
+  accentGradient,
   children,
 }: {
   icon: React.ReactNode;
   title: string;
-  iconColor: string;
+  /** Tailwind gradient 클래스 쌍 — e.g. "from-blue-500 to-blue-600" */
+  accentGradient: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="flex flex-shrink-0 items-center gap-2.5 border-b border-gray-100 px-4 py-3 dark:border-zinc-800">
-        <span className={cn("flex h-7 w-7 items-center justify-center rounded-lg", iconColor)}>
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition-shadow duration-200 hover:shadow-lg dark:bg-zinc-900">
+      {/* 컬러 액센트 스트라이프 — 위젯 테마색 */}
+      <div className={cn("h-1 w-full flex-shrink-0 bg-gradient-to-r", accentGradient)} />
+      {/* 위젯 헤더 */}
+      <div className="flex flex-shrink-0 items-center gap-2.5 px-4 py-3">
+        <span className={cn(
+          "flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm",
+          accentGradient
+        )}>
           {icon}
         </span>
         <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">{title}</h3>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">{children}</div>
     </div>
   );
 }
@@ -202,7 +209,7 @@ function RecentlyModifiedWidget({
     <WidgetCard
       icon={<Clock className="h-4 w-4 text-white" />}
       title="최근 수정 Top 5"
-      iconColor="bg-blue-500"
+      accentGradient="from-blue-500 to-blue-600"
     >
       {topLinks.length === 0 ? (
         <p className="text-center text-xs text-gray-400 dark:text-zinc-500">
@@ -252,7 +259,7 @@ function MostViewedWidget({
     <WidgetCard
       icon={<TrendingUp className="h-4 w-4 text-white" />}
       title="많이 본 게시물 Top 5"
-      iconColor="bg-violet-500"
+      accentGradient="from-violet-500 to-purple-600"
     >
       {topViewed.length === 0 ? (
         <p className="text-center text-xs text-gray-400 dark:text-zinc-500">
@@ -316,7 +323,7 @@ function WeatherWidget() {
     <WidgetCard
       icon={<Cloud className="h-4 w-4 text-white" />}
       title="날씨 & 미세먼지"
-      iconColor="bg-emerald-500"
+      accentGradient="from-emerald-500 to-teal-600"
     >
       {isLoading && (
         <div className="flex items-center justify-center py-4">
@@ -435,7 +442,7 @@ function ExchangeRateWidget() {
     <WidgetCard
       icon={<DollarSign className="h-4 w-4 text-white" />}
       title="환율 (1 USD 기준)"
-      iconColor="bg-amber-500"
+      accentGradient="from-amber-500 to-orange-500"
     >
       {isLoading && (
         <div className="flex items-center justify-center py-4">
@@ -508,7 +515,7 @@ function StockWidget() {
     <WidgetCard
       icon={<BarChart2 className="h-4 w-4 text-white" />}
       title="국내 증시"
-      iconColor="bg-indigo-500"
+      accentGradient="from-indigo-500 to-blue-600"
     >
       {isLoading && (
         <div className="flex items-center justify-center py-4">
@@ -577,7 +584,7 @@ function MemoWidget() {
     <WidgetCard
       icon={<StickyNote className="h-4 w-4 text-white" />}
       title="메모"
-      iconColor="bg-rose-500"
+      accentGradient="from-rose-500 to-pink-600"
     >
       {/* 입력창 */}
       <div className="mb-3 flex gap-2">
@@ -680,7 +687,7 @@ function CalendarWidget() {
     <WidgetCard
       icon={<Calendar className="h-4 w-4 text-white" />}
       title="미니 캘린더"
-      iconColor="bg-teal-500"
+      accentGradient="from-teal-500 to-cyan-500"
     >
       {/* 월 네비게이션 */}
       <div className="mb-2 flex items-center justify-between">
@@ -786,7 +793,7 @@ function DDayWidget() {
     <WidgetCard
       icon={<Flag className="h-4 w-4 text-white" />}
       title="D-Day 카운터"
-      iconColor="bg-pink-500"
+      accentGradient="from-pink-500 to-rose-600"
     >
       {/* D-Day 목록 */}
       {ddays.length === 0 && !isAdding && (
@@ -893,7 +900,7 @@ function BookmarkWidget() {
     <WidgetCard
       icon={<Bookmark className="h-4 w-4 text-white" />}
       title="북마크"
-      iconColor="bg-sky-500"
+      accentGradient="from-sky-500 to-blue-500"
     >
       {/* 북마크 목록 */}
       {bookmarks.length === 0 && !isAdding && (
@@ -985,7 +992,7 @@ function PomodoroWidget() {
     <WidgetCard
       icon={<Timer className="h-4 w-4 text-white" />}
       title="포모도로 타이머"
-      iconColor="bg-orange-500"
+      accentGradient="from-orange-500 to-amber-500"
     >
       {/* 모드 탭 */}
       <div className="mb-3 flex gap-1 rounded-lg bg-gray-100 p-0.5 dark:bg-zinc-800">
@@ -1089,7 +1096,7 @@ function WeeklyWeatherWidget() {
     <WidgetCard
       icon={<Cloud className="h-4 w-4 text-white" />}
       title="주간 날씨 예보"
-      iconColor="bg-cyan-500"
+      accentGradient="from-cyan-500 to-sky-500"
     >
       {isLoading && (
         <div className="flex items-center justify-center py-4">
@@ -1168,7 +1175,7 @@ function TodoWidget() {
     <WidgetCard
       icon={<ListTodo className="h-4 w-4 text-white" />}
       title="Todo"
-      iconColor="bg-teal-500"
+      accentGradient="from-teal-400 to-emerald-500"
     >
       {/* 입력창 */}
       <div className="mb-3 flex gap-2">
@@ -1333,7 +1340,7 @@ function CalculatorWidget() {
     <WidgetCard
       icon={<Calculator className="h-4 w-4 text-white" />}
       title="계산기"
-      iconColor="bg-slate-600"
+      accentGradient="from-slate-600 to-gray-700"
     >
       {/* 디스플레이 */}
       <div className="mb-3 rounded-xl bg-gray-50 px-4 py-3 dark:bg-zinc-800">
@@ -1395,7 +1402,7 @@ function ClockWidget() {
     <WidgetCard
       icon={<Clock className="h-4 w-4 text-white" />}
       title="디지털 시계"
-      iconColor="bg-violet-500"
+      accentGradient="from-violet-500 to-indigo-600"
     >
       <div className="flex flex-col items-center gap-2 py-4">
         <p className="font-mono text-4xl font-bold tabular-nums text-gray-900 dark:text-zinc-100">
@@ -1408,6 +1415,15 @@ function ClockWidget() {
 }
 
 /** ── 위젯 순서 관리 — useWidgetStore (Zustand) 로 위임됨 ── */
+
+/** 현재 시각 기준 인사말을 반환한다 */
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 6) return "야간 근무 중이시군요 🌙";
+  if (hour < 12) return "좋은 아침입니다 ☀️";
+  if (hour < 18) return "좋은 오후입니다 🌤️";
+  return "좋은 저녁입니다 🌆";
+}
 
 /** ── 홈 메인 뷰 ── */
 export function HomeView({ sections }: HomeViewProps) {
@@ -1514,12 +1530,24 @@ export function HomeView({ sections }: HomeViewProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* 헤더 */}
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-zinc-100">홈</h2>
-        <p className="mt-0.5 text-sm text-gray-400 dark:text-zinc-500">
-          총 {totalDocs}개 문서 · {sections.length}개 섹션
-        </p>
+      {/* 히어로 헤더 — 그라데이션 배너 */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-violet-600 to-purple-600 p-5 text-white shadow-lg">
+        <div className="relative z-10">
+          <p className="text-xs font-medium text-blue-100">{getGreeting()}</p>
+          <h2 className="mt-0.5 text-xl font-bold">홈</h2>
+          <p className="mt-0.5 text-sm font-medium text-blue-100">유팜시스템 지원 포털</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-medium backdrop-blur-sm">
+              📄 {totalDocs}개 문서
+            </span>
+            <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-medium backdrop-blur-sm">
+              📁 {sections.length}개 섹션
+            </span>
+          </div>
+        </div>
+        {/* 장식 원 */}
+        <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-white/10" />
+        <div className="absolute -bottom-4 right-14 h-16 w-16 rounded-full bg-white/5" />
       </div>
 
       {/* 위젯 그리드 — 드래그앤드롭으로 순서 변경 가능, 행 높이 고정으로 균일한 레이아웃 유지 */}
@@ -1533,11 +1561,13 @@ export function HomeView({ sections }: HomeViewProps) {
             onDragOver={(e) => handleDragOver(e, id)}
             onDragEnd={handleDragEnd}
             className={cn(
-              "group relative h-full transition-opacity duration-150",
+              "group relative h-full transition-all duration-150",
+              // 드래그 중이 아닐 때만 lift 효과 — transform 은 DnD 래퍼에서 관리해야 안전하다
+              !draggingId && "hover:-translate-y-0.5",
               draggingId === id && "opacity-40",
               // draggingId !== null 조건으로 실제 드래그 중일 때만 링 강조를 표시한다
               draggingId !== null && dropTargetId === id && draggingId !== id &&
-                "rounded-xl ring-2 ring-blue-400 ring-offset-2 dark:ring-offset-zinc-950"
+                "rounded-2xl ring-2 ring-blue-400 ring-offset-2 dark:ring-offset-zinc-950"
             )}
           >
             {/* 드래그 핸들 — 마우스: 호버 시 표시 / 터치: 항상 반투명 표시 */}

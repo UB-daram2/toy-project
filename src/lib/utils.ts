@@ -30,6 +30,8 @@ export function getSectionColorClasses(colorKey: "blue" | "violet" | "emerald"):
   hover: string;
   border: string;
   text: string;
+  /** bg-gradient-to-r と組み合わせて使う Tailwind gradient クラス */
+  gradient: string;
 } {
   const colorMap = {
     blue: {
@@ -38,6 +40,7 @@ export function getSectionColorClasses(colorKey: "blue" | "violet" | "emerald"):
       hover: "hover:border-blue-400/50 hover:bg-blue-50 dark:hover:border-blue-500/50 dark:hover:bg-blue-500/5",
       border: "border-blue-400/30 dark:border-blue-500/30",
       text: "text-blue-600 dark:text-blue-400",
+      gradient: "from-blue-600 to-indigo-500",
     },
     violet: {
       badge: "bg-violet-500/10 text-violet-600 ring-violet-500/20 dark:text-violet-400",
@@ -45,6 +48,7 @@ export function getSectionColorClasses(colorKey: "blue" | "violet" | "emerald"):
       hover: "hover:border-violet-400/50 hover:bg-violet-50 dark:hover:border-violet-500/50 dark:hover:bg-violet-500/5",
       border: "border-violet-400/30 dark:border-violet-500/30",
       text: "text-violet-600 dark:text-violet-400",
+      gradient: "from-violet-600 to-purple-500",
     },
     emerald: {
       badge: "bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400",
@@ -52,6 +56,7 @@ export function getSectionColorClasses(colorKey: "blue" | "violet" | "emerald"):
       hover: "hover:border-emerald-400/50 hover:bg-emerald-50 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-500/5",
       border: "border-emerald-400/30 dark:border-emerald-500/30",
       text: "text-emerald-600 dark:text-emerald-400",
+      gradient: "from-emerald-600 to-teal-500",
     },
   };
 

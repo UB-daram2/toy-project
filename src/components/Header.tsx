@@ -74,7 +74,7 @@ export function Header({ searchQuery, onSearchChange, totalDocuments }: HeaderPr
             placeholder="처리방법, 카테고리, 문서 이름 검색..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full rounded-xl border border-gray-200/80 bg-gray-50/80 py-2 pl-9 pr-8 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-100 dark:placeholder-zinc-500 dark:focus:border-indigo-500/50 dark:focus:ring-indigo-500/10"
+            className="w-full rounded-xl border border-gray-200/80 bg-gray-50/80 py-2 pl-9 pr-8 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-100 dark:placeholder-zinc-500 dark:focus:bg-zinc-900 dark:focus:border-indigo-500/50 dark:focus:ring-indigo-500/10"
           />
           {/* 검색어 지우기 버튼 */}
           {searchQuery && (

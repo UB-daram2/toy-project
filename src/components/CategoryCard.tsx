@@ -43,12 +43,11 @@ export function CategoryCard({ category, colorKey }: CategoryCardProps) {
 
   return (
     <>
-      <div className="flex flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
-        {/* 카드 헤더: 색상 인디케이터 + 제목 + 링크 수 배지 */}
-        <div className="flex items-center gap-2.5 border-b border-gray-100 px-4 py-3 dark:border-zinc-800">
-          <div
-            className={cn("h-4 w-1 flex-shrink-0 rounded-full", colorClasses.accent)}
-          />
+      <div className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:bg-zinc-900">
+        {/* 그라데이션 액센트 스트라이프 */}
+        <div className={cn("h-1 w-full flex-shrink-0 bg-gradient-to-r", colorClasses.gradient)} />
+        {/* 카드 헤더: 제목 + 링크 수 배지 */}
+        <div className="flex items-center gap-2.5 px-4 py-3">
           <h3 className="flex-1 truncate text-sm font-semibold text-gray-900 dark:text-zinc-100">
             {category.title}
           </h3>

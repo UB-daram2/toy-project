@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.10.0] — 2026-03-14
+
+### 배경 및 의사결정
+
+**1. 홈·섹션·카테고리 카드 UI/UX 전면 개편**
+기존 카드는 회색 테두리 + 평면 아이콘 배경으로 시각적 계층감이 부족했다. 2026 디자인 트렌드(높은 채도 색상, 마이크로 인터랙션, 텍스처·질감) 를 반영해 위젯·카테고리 카드를 재설계했다. 각 카드 상단에 3px 그라데이션 스트라이프를 추가해 위젯·섹션별 색상 테마를 즉시 인식할 수 있게 하고, 아이콘도 동일 그라데이션 배경으로 통일했다.
+
+**2. 홈·섹션 히어로 배너**
+홈 뷰와 섹션 뷰 상단에 그라데이션 배너를 추가했다. 홈 배너는 시간대별 인사말(`getGreeting()`)·문서/섹션 통계 배지·장식 원을 포함하여 진입 시 맥락을 즉시 전달한다. 섹션 배너는 해당 섹션 테마색 그라데이션을 사용해 어느 섹션인지 색상만으로 구분 가능하다.
+
+**3. DnD와 CSS transform 충돌 수정**
+`WidgetCard` 내부에 `hover:-translate-y-0.5`(CSS transform)를 적용했더니 HTML5 DnD의 드래그 고스트 캡처 및 `ondragover` 히트 테스트가 Chrome/Edge에서 오작동했다. transform을 `draggable` 래퍼로 이동하고 드래그 중(`draggingId !== null`)에는 적용하지 않도록 조건 분기했다.
+
+**4. 다크모드 검색창 텍스트 가시성 버그 수정**
+`focus:bg-white`가 다크모드에서 재정의되지 않아 포커스 시 배경이 흰색으로 변하면서 `dark:text-zinc-100`(흰 글씨)와 겹쳐 텍스트가 보이지 않는 문제가 있었다. `dark:focus:bg-zinc-900`을 추가해 수정했다.
+
+### Added
+- **홈 히어로 배너** (`HomeView.tsx`): 파란→바이올렛→퍼플 그라데이션, `getGreeting()` 시간대별 인사말, 문서·섹션 수 반투명 pill 배지, 장식 원 2개
+- **섹션 히어로 배너** (`SectionView.tsx`): 섹션 테마색 그라데이션(`from-blue-600 to-indigo-500` 등), 반투명 아이콘 컨테이너, 통계 pill 배지
+- **`getSectionColorClasses` gradient 필드** (`utils.ts`): blue·violet·emerald 각각 `from-X to-Y` 그라데이션 클래스 반환 — `CategoryCard` 상단 스트라이프 및 `SectionView` 배너에 사용
+
+### Changed
+- **`WidgetCard` 리디자인** (`HomeView.tsx`): `iconColor` prop → `accentGradient` prop (e.g. `"from-blue-500 to-blue-600"`), 상단 1px 그라데이션 스트라이프 추가, 아이콘 bg 그라데이션, `border` 제거 → shadow 전환, `rounded-xl` → `rounded-2xl`
+- **`CategoryCard` 리디자인** (`CategoryCard.tsx`): 세로 색상 바 제거 → 상단 그라데이션 스트라이프, `border` 제거, `rounded-2xl`, `hover:-translate-y-0.5 hover:shadow-lg`
+- **DnD hover lift 위치** (`HomeView.tsx`): `WidgetCard` 내부 `hover:-translate-y-0.5` → DnD 래퍼(`!draggingId && "hover:-translate-y-0.5"`)로 이동 — CSS transform이 `draggable` 자식에 있을 때 발생하는 DnD 오작동 방지
+- **드롭 링 radius** (`HomeView.tsx`): `rounded-xl` → `rounded-2xl` (카드 모서리와 일치)
+
+### Fixed
+- **다크모드 검색창 입력 텍스트 불가시** (`Header.tsx`): `dark:focus:bg-zinc-900` 추가 — 포커스 시 `focus:bg-white`가 다크모드 배경을 흰색으로 덮어쓰는 문제 수정
+
+---
+
 ## [0.9.0] — 2026-03-14
 
 ### 배경 및 의사결정
