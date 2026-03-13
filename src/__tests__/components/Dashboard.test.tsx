@@ -14,6 +14,14 @@ jest.mock("next-themes", () => ({
   ),
 }));
 
+// HomeView 위젯들이 호출하는 fetch를 모킹한다 (실제 네트워크 요청 방지)
+beforeEach(() => {
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({}),
+  }) as jest.Mock;
+});
+
 describe("Dashboard", () => {
   it("초기 렌더링 시 홈 뷰를 표시한다", () => {
     render(<Dashboard />);

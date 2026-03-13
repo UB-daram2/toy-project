@@ -12,6 +12,9 @@ const createJestConfig = nextJest({ dir: "./" });
 const config: Config = {
   testEnvironment: "jsdom",
 
+  // e2e 디렉터리는 Playwright가 담당하므로 Jest 테스트 검색에서 제외한다
+  testPathIgnorePatterns: ["/node_modules/", "<rootDir>/e2e/"],
+
   // 테스트 실행 전 jest-dom 매처를 전역으로 등록
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
 
