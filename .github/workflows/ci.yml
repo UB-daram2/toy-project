@@ -36,14 +36,6 @@ jobs:
       - name: Build production bundle
         run: npm run build
 
-      # 빌드 아티팩트를 E2E 잡이 재사용할 수 있도록 업로드
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: nextjs-build
-          path: .next/
-          retention-days: 1
-
   e2e:
     name: E2E Tests
     needs: build-and-test
@@ -62,11 +54,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: nextjs-build
-          path: .next/
+      - name: Build production bundle
+        run: npm run build
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
