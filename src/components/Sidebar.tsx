@@ -28,11 +28,11 @@ type IconName = keyof typeof ICON_MAP;
 
 export function Sidebar({ sections, activeSectionId, onSectionSelect }: SidebarProps) {
   return (
-    <aside className="flex h-full w-64 flex-shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 px-3 py-6">
+    <aside className="flex h-full w-64 flex-shrink-0 flex-col border-r border-gray-200 bg-white px-3 py-6 dark:border-zinc-800 dark:bg-zinc-950">
       {/* 서비스 로고 / 타이틀 */}
       <div className="mb-8 px-3">
-        <h1 className="text-lg font-bold text-zinc-100">유팜 지원 포털</h1>
-        <p className="mt-1 text-xs text-zinc-500">고객 지원 지식베이스</p>
+        <h1 className="text-lg font-bold text-gray-900 dark:text-zinc-100">유팜 지원 포털</h1>
+        <p className="mt-1 text-xs text-gray-400 dark:text-zinc-500">고객 지원 지식베이스</p>
       </div>
 
       {/* 섹션 네비게이션 목록 */}
@@ -57,15 +57,17 @@ export function Sidebar({ sections, activeSectionId, onSectionSelect }: SidebarP
               className={cn(
                 "group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all duration-150",
                 isActive
-                  ? `bg-zinc-800 ${colorClasses.text}`
-                  : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
+                  ? `bg-gray-100 dark:bg-zinc-800 ${colorClasses.text}`
+                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
               )}
             >
               {/* 섹션 아이콘 */}
               <IconComponent
                 className={cn(
                   "h-4 w-4 flex-shrink-0",
-                  isActive ? colorClasses.text : "text-zinc-500 group-hover:text-zinc-300"
+                  isActive
+                    ? colorClasses.text
+                    : "text-gray-400 group-hover:text-gray-700 dark:text-zinc-500 dark:group-hover:text-zinc-300"
                 )}
               />
 
@@ -80,7 +82,7 @@ export function Sidebar({ sections, activeSectionId, onSectionSelect }: SidebarP
                   "rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
                   isActive
                     ? colorClasses.badge
-                    : "bg-zinc-800 text-zinc-500 ring-zinc-700"
+                    : "bg-gray-100 text-gray-500 ring-gray-200 dark:bg-zinc-800 dark:text-zinc-500 dark:ring-zinc-700"
                 )}
               >
                 {totalLinks}

@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
-/* 다크모드 기본 배경/텍스트 색상 변수 */
+/* Tailwind v4에서 .dark 클래스 기반 다크모드를 활성화한다 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* 라이트/다크모드 배경 색상 변수 */
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -12,7 +15,7 @@
   --font-sans: var(--font-geist);
 }
 
-/* next-themes의 .dark 클래스 기반 다크모드 */
+/* next-themes의 .dark 클래스 적용 시 다크 배경으로 전환 */
 .dark {
   --background: #09090b;
   --foreground: #f4f4f5;
@@ -23,7 +26,7 @@ body {
   color: var(--foreground);
 }
 
-/* 스크롤바 스타일 (다크모드) */
+/* 스크롤바 스타일 (라이트/다크 모드) */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -33,10 +36,18 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: #d4d4d8;
   border-radius: 9999px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+}
+
 ::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
   background: #52525b;
 }

@@ -50,27 +50,27 @@ export function SectionView({ section, isSearchResult = false }: SectionViewProp
             <IconComponent className={cn("h-5 w-5", colorClasses.text)} />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-zinc-100">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-zinc-100">
               {section.title}
               {/* 검색 결과임을 나타내는 레이블 */}
               {isSearchResult && (
-                <span className="ml-2 text-sm font-normal text-zinc-500">
+                <span className="ml-2 text-sm font-normal text-gray-400 dark:text-zinc-500">
                   (검색 결과)
                 </span>
               )}
             </h2>
-            <p className="text-sm text-zinc-500">{section.description}</p>
+            <p className="text-sm text-gray-400 dark:text-zinc-500">{section.description}</p>
           </div>
         </div>
 
         {/* 통계 배지: 카테고리 수 / 문서 수 */}
         <div className="hidden sm:flex items-center gap-3 text-sm">
-          <div className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5">
-            <span className="text-zinc-500">카테고리</span>
-            <span className="font-medium text-zinc-100">{section.categories.length}</span>
+          <div className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-900">
+            <span className="text-gray-400 dark:text-zinc-500">카테고리</span>
+            <span className="font-medium text-gray-900 dark:text-zinc-100">{section.categories.length}</span>
           </div>
-          <div className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5">
-            <span className="text-zinc-500">문서</span>
+          <div className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-900">
+            <span className="text-gray-400 dark:text-zinc-500">문서</span>
             <span className={cn("font-medium", colorClasses.text)}>{totalLinks}</span>
           </div>
         </div>
@@ -89,7 +89,7 @@ export function SectionView({ section, isSearchResult = false }: SectionViewProp
         </div>
       ) : (
         /* 검색 결과 없음 표시 */
-        <div className="flex items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 py-12 text-sm text-zinc-500">
+        <div className="flex items-center justify-center rounded-xl border border-gray-200 bg-white py-12 text-sm text-gray-400 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-500">
           검색 결과가 없습니다.
         </div>
       )}

@@ -26,6 +26,8 @@ const config: Config = {
     "!src/**/*.d.ts",
     "!src/app/layout.tsx",
     "!src/app/page.tsx",
+    // API Route는 서버 사이드 전용으로 Jest jsdom 환경에서 테스트 불가
+    "!src/app/api/**",
   ],
 
   // 90% 이상 커버리지 강제

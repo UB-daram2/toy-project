@@ -43,7 +43,7 @@ export function Dashboard() {
   }, [filteredSections, activeSectionId]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+    <div className="flex h-screen overflow-hidden bg-white text-gray-900 dark:bg-zinc-950 dark:text-zinc-100">
       {/* 좌측 사이드바: 섹션 네비게이션 */}
       <Sidebar
         sections={knowledgeSections}
@@ -61,7 +61,7 @@ export function Dashboard() {
         />
 
         {/* 콘텐츠 영역 */}
-        <main className="flex-1 overflow-y-auto px-6 py-6">
+        <main className="flex-1 overflow-y-auto bg-gray-50 px-6 py-6 dark:bg-zinc-950">
           {activeSectionData ? (
             <SectionView
               section={activeSectionData}
@@ -69,7 +69,7 @@ export function Dashboard() {
             />
           ) : (
             /* 전체 섹션에서 검색 결과 없음 */
-            <div className="flex h-full items-center justify-center text-zinc-500">
+            <div className="flex h-full items-center justify-center text-gray-400 dark:text-zinc-500">
               <div className="text-center">
                 <p className="text-lg font-medium">검색 결과 없음</p>
                 <p className="mt-1 text-sm">
