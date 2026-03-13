@@ -28,6 +28,8 @@ const config: Config = {
     "!src/app/page.tsx",
     // API Route는 서버 사이드 전용으로 Jest jsdom 환경에서 테스트 불가
     "!src/app/api/**",
+    // Notion 구조 파싱은 Node.js 서버 전용 (외부 HTTP 의존, SSR only)
+    "!src/lib/notion-structure.ts",
   ],
 
   // 90% 이상 커버리지 강제

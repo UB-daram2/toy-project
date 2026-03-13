@@ -102,4 +102,58 @@ describe("CategoryCard", () => {
     rerender(<CategoryCard category={sampleCategory} colorKey="emerald" />);
     expect(screen.getByText("처방조제")).toBeInTheDocument();
   });
+
+  it("외부 링크 아이콘 클릭 시 이벤트 버블링이 차단된다", () => {
+    render(<CategoryCard category={sampleCategory} colorKey="blue" />);
+    const externalLink = screen.getAllByRole("link")[0];
+    // stopPropagation 때문에 모달이 열리지 않아야 한다
+    fireEvent.click(externalLink);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+/** 더 보기 / 접기 기능 테스트 (PREVIEW_COUNT=6 초과 링크) */
+describe("CategoryCard — 더 보기 / 접기", () => {
+  /** 링크 7개짜리 카테고리 (PREVIEW_COUNT=6 초과) */
+  const manyLinksCategory: KnowledgeCategory = {
+    id: "cat-many",
+    title: "많은링크카테고리",
+    links: Array.from({ length: 7 }, (_, i) => ({
+      id: `link-${i}`,
+      title: `링크${i + 1}`,
+      url: `https://notion.so/${"a".repeat(31)}${i}`,
+    })),
+  };
+
+  it("링크가 7개면 '더 보기' 버튼이 표시된다", () => {
+    render(<CategoryCard category={manyLinksCategory} colorKey="blue" />);
+    expect(screen.getByText("1개 더 보기")).toBeInTheDocument();
+  });
+
+  it("'더 보기' 클릭 시 모든 링크가 표시된다", () => {
+    render(<CategoryCard category={manyLinksCategory} colorKey="blue" />);
+    // 초기에는 링크7이 없다
+    expect(screen.queryByText("링크7")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("1개 더 보기"));
+    expect(screen.getByText("링크7")).toBeInTheDocument();
+  });
+
+  it("'더 보기' 클릭 후 '접기' 버튼이 표시된다", () => {
+    render(<CategoryCard category={manyLinksCategory} colorKey="blue" />);
+    fireEvent.click(screen.getByText("1개 더 보기"));
+    expect(screen.getByText("접기")).toBeInTheDocument();
+  });
+
+  it("'접기' 클릭 시 다시 PREVIEW_COUNT 개만 표시된다", () => {
+    render(<CategoryCard category={manyLinksCategory} colorKey="blue" />);
+    fireEvent.click(screen.getByText("1개 더 보기"));
+    expect(screen.getByText("링크7")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("접기"));
+    expect(screen.queryByText("링크7")).not.toBeInTheDocument();
+  });
+
+  it("링크가 6개 이하면 '더 보기' 버튼이 없다", () => {
+    render(<CategoryCard category={sampleCategory} colorKey="blue" />);
+    expect(screen.queryByText(/더 보기/)).not.toBeInTheDocument();
+  });
 });

@@ -90,7 +90,7 @@ describe("Sidebar", () => {
     expect(screen.getByText("유팜 지원 포털")).toBeInTheDocument();
   });
 
-  it("빈 섹션 배열이면 로고만 렌더링한다", () => {
+  it("빈 섹션 배열이면 홈 버튼만 렌더링한다", () => {
     render(
       <Sidebar
         sections={[]}
@@ -99,7 +99,21 @@ describe("Sidebar", () => {
       />
     );
     expect(screen.getByText("유팜 지원 포털")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    // 섹션이 없어도 홈 버튼은 항상 표시된다
+    expect(screen.getByRole("button", { name: /홈/ })).toBeInTheDocument();
+  });
+
+  it("홈 버튼 클릭 시 onSectionSelect('home')를 호출한다", () => {
+    const onSectionSelect = jest.fn();
+    render(
+      <Sidebar
+        sections={sampleSections}
+        activeSectionId="section-a"
+        onSectionSelect={onSectionSelect}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /홈/ }));
+    expect(onSectionSelect).toHaveBeenCalledWith("home");
   });
 
   it("알 수 없는 아이콘 이름이어도 오류 없이 렌더링한다", () => {

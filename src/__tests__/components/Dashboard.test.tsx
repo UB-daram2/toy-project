@@ -15,17 +15,17 @@ jest.mock("next-themes", () => ({
 }));
 
 describe("Dashboard", () => {
-  it("초기 렌더링 시 첫 번째 섹션 제목을 h2로 표시한다", () => {
+  it("초기 렌더링 시 홈 뷰를 표시한다", () => {
     render(<Dashboard />);
-    // 첫 번째 섹션 "처리방법이 궁금해요"가 메인 heading에 표시되어야 한다
+    // 초기 상태는 홈 뷰 — HomeView의 "홈" heading이 표시되어야 한다
     expect(
-      screen.getByRole("heading", { name: /처리방법이 궁금해요/ })
+      screen.getByRole("heading", { name: /홈/ })
     ).toBeInTheDocument();
   });
 
-  it("사이드바에 세 개의 섹션 버튼이 모두 있다", () => {
+  it("사이드바에 홈 버튼과 세 개의 섹션 버튼이 모두 있다", () => {
     render(<Dashboard />);
-    // 각 섹션 버튼이 role=button으로 접근 가능해야 한다
+    expect(screen.getByRole("button", { name: /홈/ })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /처리방법이 궁금해요/ })
     ).toBeInTheDocument();
@@ -37,25 +37,23 @@ describe("Dashboard", () => {
     ).toBeInTheDocument();
   });
 
-  it("사이드바에서 다른 섹션 클릭 시 해당 섹션 콘텐츠로 전환된다", () => {
+  it("사이드바에서 섹션 클릭 시 해당 섹션 콘텐츠로 전환된다", () => {
     render(<Dashboard />);
-    // "사용방법이 궁금해요" 버튼 클릭
     const sidebarButton = screen.getByRole("button", {
       name: /사용방법이 궁금해요/,
     });
     fireEvent.click(sidebarButton);
-    // 메인 영역의 h2에 "사용방법이 궁금해요"가 표시되어야 한다
     expect(
       screen.getByRole("heading", { name: /사용방법이 궁금해요/ })
     ).toBeInTheDocument();
   });
 
-  it("검색어 입력 시 일치하는 섹션 콘텐츠를 표시한다", () => {
+  it("검색어 입력 시 홈 뷰에서 벗어나 일치하는 섹션 콘텐츠를 표시한다", () => {
     render(<Dashboard />);
     const searchInput = screen.getByPlaceholderText(
       "처리방법, 카테고리, 문서 이름 검색..."
     );
-    // "처방조제"로 검색
+    // "처방조제"로 검색 — 홈 뷰에서 검색해도 SectionView로 전환된다
     fireEvent.change(searchInput, { target: { value: "처방조제" } });
     expect(screen.getAllByText("처방조제").length).toBeGreaterThan(0);
   });
@@ -65,7 +63,6 @@ describe("Dashboard", () => {
     const searchInput = screen.getByPlaceholderText(
       "처리방법, 카테고리, 문서 이름 검색..."
     );
-    // 존재하지 않는 검색어 입력
     fireEvent.change(searchInput, { target: { value: "존재하지않는검색어xyz" } });
     expect(screen.getByText("검색 결과 없음")).toBeInTheDocument();
   });
@@ -81,7 +78,6 @@ describe("Dashboard", () => {
 
   it("총 문서 수를 헤더에 표시한다", () => {
     render(<Dashboard />);
-    // "개 문서" 텍스트가 있는지 확인
     expect(screen.getByText("개 문서")).toBeInTheDocument();
   });
 

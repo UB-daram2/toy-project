@@ -71,8 +71,8 @@ export function Dashboard({ sections = knowledgeSections }: DashboardProps) {
 
         {/* 콘텐츠 영역 */}
         <main className="flex-1 overflow-y-auto bg-gray-50 px-6 py-6 dark:bg-zinc-950">
-          {/* 홈 뷰: Top5 위젯 + 날씨 */}
-          {activeSectionId === "home" ? (
+          {/* 홈 뷰: 검색어 없을 때만 표시 */}
+          {activeSectionId === "home" && !searchQuery.trim() ? (
             <HomeView sections={sections} />
           ) : activeSectionData ? (
             <SectionView

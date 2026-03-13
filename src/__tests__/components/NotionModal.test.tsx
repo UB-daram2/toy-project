@@ -710,7 +710,7 @@ describe("NotionModal", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("페이지를 불러오지 못했습니다. Notion 통합 설정을 확인해주세요.")
+        screen.getByText("페이지를 불러오지 못했습니다.")
       ).toBeInTheDocument();
     });
   });
