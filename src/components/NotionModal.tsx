@@ -3,10 +3,11 @@
 /**
  * Notion 페이지 내용을 모달로 표시하는 컴포넌트
  * 카드 클릭 시 API Route를 통해 Notion 블록을 가져와 렌더링한다.
+ * child_page 블록 클릭 시 모달 내에서 페이지 내비게이션을 지원한다.
  */
 
-import { useEffect, useState } from "react";
-import { X, ExternalLink, Loader2 } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { X, ExternalLink, Loader2, ChevronLeft, FileText, ChevronRight } from "lucide-react";
 import { extractPageIdFromUrl } from "@/lib/utils";
 
 /** Notion Rich Text 항목 타입 */
@@ -31,13 +32,17 @@ interface NotionBlock {
   [key: string]: any;
 }
 
+/** 모달 내비게이션 항목 */
+interface PageEntry {
+  url: string;
+  title: string;
+}
+
 /**
  * Rich Text 배열을 스타일이 적용된 React 노드로 변환한다.
- * bold, italic, code, link 등의 어노테이션을 처리한다.
  */
 function renderRichText(richTexts: RichTextItem[]): React.ReactNode {
   return richTexts.map((item, index) => {
-    // 인라인 코드
     if (item.annotations.code) {
       return (
         <code
@@ -49,7 +54,6 @@ function renderRichText(richTexts: RichTextItem[]): React.ReactNode {
       );
     }
 
-    // 텍스트 스타일 클래스 조합
     const className = [
       item.annotations.bold && "font-semibold",
       item.annotations.italic && "italic",
@@ -59,7 +63,6 @@ function renderRichText(richTexts: RichTextItem[]): React.ReactNode {
       .filter(Boolean)
       .join(" ");
 
-    // 링크가 있으면 앵커 태그로 감싼다
     if (item.href) {
       return (
         <a
@@ -84,12 +87,14 @@ function renderRichText(richTexts: RichTextItem[]): React.ReactNode {
 
 /**
  * 단일 Notion 블록을 타입에 따라 적합한 HTML 엘리먼트로 렌더링한다.
- * 지원하지 않는 타입은 null을 반환한다.
+ * child_page 블록은 onNavigate 콜백을 통해 모달 내 페이지 이동을 지원한다.
  */
 function NotionBlockRenderer({
   block,
+  onNavigate,
 }: {
   block: NotionBlock;
+  onNavigate: (entry: PageEntry) => void;
 }): React.ReactElement | null {
   const { type } = block;
   const data = block[type] as {
@@ -148,7 +153,6 @@ function NotionBlockRenderer({
     case "to_do":
       return (
         <div className="mb-1 flex items-start gap-2 text-sm text-gray-700 dark:text-zinc-300">
-          {/* 체크박스는 읽기 전용으로 표시 */}
           <input
             type="checkbox"
             checked={data.checked ?? false}
@@ -191,7 +195,6 @@ function NotionBlockRenderer({
       );
 
     case "image": {
-      // file 타입 또는 external URL 처리
       const imageUrl = data.file?.url ?? data.external?.url ?? "";
       return imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -203,35 +206,72 @@ function NotionBlockRenderer({
       ) : null;
     }
 
-    // 지원하지 않는 블록 타입은 렌더링 생략
+    case "toggle":
+      return (
+        <details className="mb-2 rounded-lg border border-gray-200 dark:border-zinc-700">
+          <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:text-zinc-300 dark:hover:bg-zinc-800">
+            {renderRichText(data.rich_text ?? [])}
+          </summary>
+        </details>
+      );
+
+    case "child_page": {
+      // 서브페이지 블록 → 클릭 시 모달 내에서 해당 페이지로 이동
+      const pageUrl = data.url as string;
+      const pageTitle = data.rich_text?.[0]?.plain_text ?? "페이지";
+      return (
+        <button
+          onClick={() => onNavigate({ url: pageUrl, title: pageTitle })}
+          className="mb-2 flex w-full items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        >
+          <FileText className="h-4 w-4 flex-shrink-0 text-gray-400 dark:text-zinc-500" />
+          <span className="flex-1 text-sm text-gray-700 dark:text-zinc-300">
+            {pageTitle}
+          </span>
+          <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-gray-400 dark:text-zinc-500" />
+        </button>
+      );
+    }
+
     default:
       return null;
   }
 }
 
 interface NotionModalProps {
-  /** 열람할 Notion 페이지 URL */
   pageUrl: string;
-  /** 모달 헤더에 표시할 제목 */
   pageTitle: string;
-  /** 모달 닫기 콜백 */
   onClose: () => void;
 }
 
-export function NotionModal({
-  pageUrl,
-  pageTitle,
-  onClose,
-}: NotionModalProps) {
+export function NotionModal({ pageUrl, pageTitle, onClose }: NotionModalProps) {
+  // 내비게이션 히스토리 스택 (마지막 항목이 현재 페이지)
+  const [pageStack, setPageStack] = useState<PageEntry[]>([
+    { url: pageUrl, title: pageTitle },
+  ]);
+
   const [blocks, setBlocks] = useState<NotionBlock[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // URL에서 페이지 ID 추출
-  const pageId = extractPageIdFromUrl(pageUrl);
+  // 현재 표시 중인 페이지
+  const currentPage = pageStack[pageStack.length - 1];
+  const canGoBack = pageStack.length > 1;
 
-  // 페이지 블록 데이터 로딩
+  // 서브페이지로 이동 (스택에 추가)
+  const navigateTo = useCallback((entry: PageEntry) => {
+    setPageStack((prev) => [...prev, entry]);
+  }, []);
+
+  // 이전 페이지로 돌아가기
+  const navigateBack = useCallback(() => {
+    setPageStack((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+  }, []);
+
+  // URL에서 페이지 ID 추출 후 블록 데이터 로딩
   useEffect(() => {
+    const pageId = extractPageIdFromUrl(currentPage.url);
+
     if (!pageId) {
       setError("올바르지 않은 페이지 URL입니다.");
       setIsLoading(false);
@@ -241,6 +281,7 @@ export function NotionModal({
     async function fetchBlocks() {
       setIsLoading(true);
       setError(null);
+      setBlocks([]);
       try {
         const response = await fetch(`/api/notion/${pageId}`);
         const data = await response.json();
@@ -250,7 +291,7 @@ export function NotionModal({
         setError(
           err instanceof Error
             ? err.message
-            : "페이지를 불러오지 못했습니다. Notion 통합 설정을 확인해주세요."
+            : "페이지를 불러오지 못했습니다."
         );
       } finally {
         setIsLoading(false);
@@ -258,7 +299,7 @@ export function NotionModal({
     }
 
     fetchBlocks();
-  }, [pageId]);
+  }, [currentPage.url]);
 
   // ESC 키로 모달 닫기
   useEffect(() => {
@@ -273,22 +314,33 @@ export function NotionModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={pageTitle}
+      aria-label={currentPage.title}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      // 배경 클릭으로 모달 닫기
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div className="relative flex h-full max-h-[80vh] w-full max-w-3xl flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
-        {/* 헤더: 제목 + Notion 열기 링크 + 닫기 버튼 */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-zinc-800">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-zinc-100">
-            {pageTitle}
+        {/* 헤더: 뒤로가기 + 제목 + Notion 열기 + 닫기 */}
+        <div className="flex items-center gap-2 border-b border-gray-200 px-4 py-3 dark:border-zinc-800">
+          {/* 뒤로가기 버튼 (서브페이지 이동 시에만 표시) */}
+          {canGoBack && (
+            <button
+              onClick={navigateBack}
+              aria-label="이전 페이지"
+              className="flex-shrink-0 rounded-lg border border-gray-200 p-1.5 text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-900 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-100"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          )}
+
+          <h2 className="flex-1 truncate text-base font-semibold text-gray-900 dark:text-zinc-100">
+            {currentPage.title}
           </h2>
-          <div className="flex items-center gap-2">
+
+          <div className="flex flex-shrink-0 items-center gap-2">
             <a
-              href={pageUrl}
+              href={currentPage.url}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-900 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-100"
@@ -306,9 +358,8 @@ export function NotionModal({
           </div>
         </div>
 
-        {/* 본문: 블록 렌더링 영역 */}
+        {/* 본문: 블록 렌더링 */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {/* 로딩 상태 */}
           {isLoading && (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -318,25 +369,26 @@ export function NotionModal({
             </div>
           )}
 
-          {/* 에러 상태 */}
           {error && (
             <div className="flex items-center justify-center py-16 text-sm text-red-500">
               {error}
             </div>
           )}
 
-          {/* 빈 페이지 */}
           {!isLoading && !error && blocks.length === 0 && (
             <div className="flex items-center justify-center py-16 text-sm text-gray-400 dark:text-zinc-500">
               내용이 없습니다.
             </div>
           )}
 
-          {/* 블록 목록 렌더링 */}
           {!isLoading && !error && blocks.length > 0 && (
             <div>
               {blocks.map((block) => (
-                <NotionBlockRenderer key={block.id} block={block} />
+                <NotionBlockRenderer
+                  key={block.id}
+                  block={block}
+                  onNavigate={navigateTo}
+                />
               ))}
             </div>
           )}

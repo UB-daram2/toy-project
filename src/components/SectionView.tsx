@@ -78,7 +78,7 @@ export function SectionView({ section, isSearchResult = false }: SectionViewProp
 
       {/* 카테고리 카드 그리드 */}
       {section.categories.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {section.categories.map((category) => (
             <CategoryCard
               key={category.id}
