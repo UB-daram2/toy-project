@@ -24,7 +24,8 @@ export function Header({ searchQuery, onSearchChange, totalDocuments }: HeaderPr
   // 서버 사이드 렌더링 시 테마 불일치를 방지하기 위해 마운트 후에만 테마 UI를 렌더링
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
-    setIsMounted(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsMounted(true); // SSR 하이드레이션 불일치 방지용 마운트 플래그
   }, []);
 
   /** 다크/라이트 모드를 토글한다 */

@@ -189,7 +189,8 @@ function MostViewedWidget({
 
   // 클라이언트에서만 localStorage를 읽는다
   useEffect(() => {
-    setTopViewed(getTopViewed(5));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTopViewed(getTopViewed(5)); // localStorage는 클라이언트 전용 — 마운트 후 1회만 읽음
   }, []);
 
   return (
