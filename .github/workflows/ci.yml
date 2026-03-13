@@ -7,6 +7,10 @@ on:
     branches: [main, master]
 
 jobs:
+  # ── 1단계: 정적 분석 + 단위/통합 테스트 + 빌드 ──────────────────────────────
+  # 코드 품질(lint·type), 로직 정확성(테스트 284개, 커버리지 90%+),
+  # 프로덕션 빌드 성공 여부를 순서대로 검증한다.
+  # 이 job이 실패하면 E2E·배포 job은 실행되지 않는다.
   build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
@@ -15,37 +19,60 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+          cache: npm   # package-lock.json 기반 캐시로 설치 시간 단축
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci   # package-lock.json을 그대로 재현 (npm install과 달리 lock 파일 수정 없음)
+
+      - name: Audit dependencies for known vulnerabilities
+        # --audit-level=high: 심각도 high 이상의 취약점 발견 시 실패
+        # --omit=dev: 개발 의존성은 프로덕션 영향 없으므로 제외
+        run: npm audit --audit-level=high --omit=dev
 
       - name: Run ESLint
+        # TypeScript strict + react-hooks 규칙 포함
         run: npm run lint
 
       - name: Run type check
+        # 컴파일 없이 타입 오류만 검출 (빌드보다 빠름)
         run: npx tsc --noEmit
 
       - name: Run tests with coverage
+        # 커버리지 90% 미달 시 jest.config.ts의 coverageThreshold에 의해 실패
         run: npm run test:coverage
 
+      - name: Upload coverage report
+        # 커버리지 결과를 아티팩트로 보관 (실패 여부와 무관하게 항상 업로드)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
       - name: Build production bundle
+        # 단위 테스트 통과 후 실제 Next.js 빌드 성공 여부 최종 확인
         run: npm run build
 
+  # ── 2단계: E2E 스모크 테스트 ────────────────────────────────────────────────
+  # 실제 프로덕션 빌드를 Chromium 브라우저로 실행하여 사용자 흐름을 검증한다.
+  # 단위 테스트로는 잡기 어려운 라우팅·하이드레이션·렌더링 문제를 발견한다.
+  # 별도 job으로 분리한 이유: E2E는 단위 테스트보다 실행 시간이 길고
+  # Playwright 브라우저 설치 비용이 크므로, 단위 테스트 실패 시 즉시 스킵한다.
   e2e:
     name: E2E Tests
-    needs: build-and-test
+    needs: build-and-test   # 1단계 통과 후에만 실행
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -55,9 +82,11 @@ jobs:
         run: npm ci
 
       - name: Build production bundle
+        # E2E는 dev 서버가 아닌 프로덕션 빌드 기준으로 실행 — 실제 배포 환경과 동일 조건
         run: npm run build
 
       - name: Install Playwright browsers
+        # Chromium만 설치하여 설치 시간 단축 (Firefox·WebKit은 스모크 테스트 범위 외)
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
@@ -66,6 +95,7 @@ jobs:
           CI: true
 
       - name: Upload Playwright report on failure
+        # 실패 시 HTML 리포트를 아티팩트로 보관 — 재현 및 디버깅에 활용
         if: failure()
         uses: actions/upload-artifact@v4
         with:
@@ -73,6 +103,10 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  # ── 3단계: Vercel 프로덕션 배포 ─────────────────────────────────────────────
+  # master 브랜치 push + 1·2단계 모두 통과한 경우에만 실행된다.
+  # PR은 배포 제외 (미리보기 빌드는 Vercel 자체 PR preview로 처리).
+  # 배포 실패 시: Vercel Dashboard → Deployments → 이전 빌드 "Promote to Production"으로 롤백
   deploy:
     name: Deploy to Vercel
     needs: [build-and-test, e2e]
@@ -84,7 +118,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -93,7 +127,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Deploy to Vercel
+      - name: Deploy to Vercel (production)
+        # VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID는 GitHub Secrets에 등록됨
         run: npx vercel --prod --yes
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

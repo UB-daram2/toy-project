@@ -26,9 +26,24 @@ Notion 최상위 페이지(`기술지원`)에서 섹션 → 카테고리 → 링
 | **위젯 커스터마이징** | DnD 재정렬 (persist 저장) | 없음 | 제한적 | 없음 | 구현 비용 큼 |
 
 **차별화 포인트**: Notion을 CMS로 유지하면서 API 키·서버·라이선스 비용 없이 10분 안에 배포 가능한 최소 비용 대시보드. 지식베이스 탐색 + 업무 생산성 도구(날씨·환율·증시·포모도로·D-Day)를 단일 화면에 통합. 기존 Notion 워크플로를 바꾸지 않고 **읽기 전용 레이어**로 추가하는 것이 핵심 가치.
+
+### 외부 API 의존성 및 안정성 평가
+
+AI 에이전트가 API 호출 코드를 수정할 때 각 API의 특성과 장애 시 영향을 파악할 수 있도록 정리한다.
+
+| API | 인증 방식 | 장애 시 영향 범위 | 폴백 전략 | 마이그레이션 경로 |
+|-----|-----------|------------------|-----------|------------------|
+| Notion `loadPageChunk` | 인증 불필요 (공개 페이지 접근) | 포털 전체 콘텐츠 미표시 | `knowledge-base.ts` 정적 폴백으로 기본 탐색 유지 | `notion-structure.ts` + `api/notion/[pageId]/route.ts` 교체로 공식 API 전환 |
+| Yahoo Finance | 인증 불필요 (서버 프록시로 CORS 우회) | 증시 위젯 에러 표시 | `{kospi:null, kosdaq:null}` 반환, 위젯 자체 에러 상태 | `/api/market/route.ts` 단일 파일 교체로 다른 증시 API 전환 |
+| Open-Meteo | 인증 불필요 (공개 API) | 날씨/예보 위젯 에러 표시 | 위젯 내 에러 UI, 나머지 위젯 영향 없음 | `fetchWeather`, `fetchWeeklyForecast` 함수 내부만 수정 |
+| Frankfurter | 인증 불필요 (공개 API) | 환율 위젯 에러 표시 | 위젯 내 에러 UI | `ExchangeRateWidget` 내 fetch URL만 교체 |
+| date.nager.at | 인증 불필요 (공개 API) | 공휴일 표시 누락 (캘린더 기능 유지) | `[]` 반환, 캘린더 네비게이션 정상 | `fetchHolidays` 함수 내부만 수정 |
+
+모든 외부 API는 응답 형식이 변경되더라도 각 API 호출 레이어의 에러 처리 분기가 발동하여 클라이언트에 에러 상태를 반환한다. 위젯은 에러 UI를 표시하고 나머지 위젯은 정상 동작한다.
+
 ### 핵심 의사결정
 
-- **Notion 공식 API 대신 `loadPageChunk` 비공식 API 사용**: 인증 없이 공개 Notion 페이지에 접근 가능하여 API 키 관리 부담 없음. 위험: Notion 내부 변경에 취약. 마이그레이션 경로: `notion-structure.ts`, `api/notion/[pageId]/route.ts` 교체로 공식 API로 전환 가능
+- **Notion 공식 API 대신 `loadPageChunk` 사용**: 인증 없이 공개 Notion 페이지에 접근 가능하여 API 키 관리 부담 없음. 고려 사항: Notion 내부 스펙 변경 시 대응 필요. 마이그레이션 경로: `notion-structure.ts`, `api/notion/[pageId]/route.ts` 교체로 공식 API로 전환 가능
 - **Server Component에서 구조 fetch**: 초기 렌더링 시 Notion 계층 구조를 서버에서 로딩하여 클라이언트 waterfall 방지
 - **localStorage 기반 열람 추적**: 외부 서버 의존 없이 클라이언트에서 열람 수를 집계
 - **Open-Meteo API**: 인증 불필요한 무료 날씨 API로 현재 날씨 + 대기질 + 7일 예보 제공
@@ -130,6 +145,31 @@ src/hooks/usePomodoro.ts              ← 포모도로 타이머 커스텀 훅 (
        WeeklyWeatherWidget → api.open-meteo.com (7일 예보)
 ```
 
+## 위젯 비동기 fetch 패턴
+
+`HomeView.tsx` 내 외부 API 위젯(WeatherWidget, ExchangeRateWidget, StockWidget, CalendarWidget, WeeklyWeatherWidget)은 공통 패턴을 따른다.
+
+```typescript
+// 1. 로컬 상태: data(null=미로드), isLoading, error 3종
+const [data, setData] = useState<T | null>(null);
+const [isLoading, setIsLoading] = useState(true);
+const [error, setError] = useState(false);
+
+// 2. 마운트 시 1회 fetch (의존성 배열 빈 배열)
+useEffect(() => {
+  fetchSomeApi()
+    .then((d) => setData(d))        // eslint-disable-next-line react-hooks/set-state-in-effect
+    .catch(() => setError(true))
+    .finally(() => setIsLoading(false));
+}, []);
+
+// 3. UI: isLoading → 스피너, error → 재시도 버튼, data → 정상 렌더링
+```
+
+**eslint-disable-next-line react-hooks/set-state-in-effect 허용 기준**: `useEffect` 외부에서 정의된 `load` 함수 또는 `then` 콜백 내 `setState` 호출에 한해서만 허용. Zustand persist 스토어로 관리 가능한 영속 상태에는 절대 사용 금지.
+
+**MostViewedWidget의 localStorage 직접 접근 예외**: 이 위젯은 `CategoryCard`(별도 컴포넌트)가 기록하는 열람 수를 마운트 시 1회 읽는 단방향 구조다. 공유 Zustand 스토어를 만들면 카드 클릭 시 마다 홈 위젯이 리렌더링되는 불필요한 비용이 발생한다. 따라서 `useEffect` 내 `getTopViewed(5)` 1회 호출로 제한하고 스토어화하지 않는다.
+
 ## 작성 규칙
 
 - 실제 동작하는 코드만 작성 (미구현 stub 금지)
@@ -137,7 +177,7 @@ src/hooks/usePomodoro.ts              ← 포모도로 타이머 커스텀 훅 (
 - 기능을 명확히 나타내는 이름 사용 (약어/모호한 이름 금지)
 - 로직 블록마다 반드시 주석 작성
 - **영속 상태는 반드시 Zustand persist 스토어로 관리** — `localStorage` 직접 접근 금지 (SSR 하이드레이션 불일치 유발)
-  - 예외: `MostViewedWidget`(열람 수 집계), widgetOrder — 이미 스토어화 완료
+  - 예외: `MostViewedWidget`(열람 수 집계) — 단방향 읽기 전용, 위 "위젯 비동기 fetch 패턴" 참고
   - `eslint-disable-next-line react-hooks/set-state-in-effect`는 async fetch 함수 내 setState에 한해 허용
 
 ## 테스트 전략
@@ -158,23 +198,43 @@ src/hooks/usePomodoro.ts              ← 포모도로 타이머 커스텀 훅 (
 
 ## CI/CD 및 배포 전략
 
+### 파이프라인 구조 (3단계 job)
+
 ```
-push → master:
-  1. lint (ESLint)
-  2. type-check (tsc --noEmit)
-  3. test:coverage (커버리지 90% 미달 시 실패)
-  4. build (Next.js 프로덕션 빌드)
-  5. E2E (Playwright chromium, build 재실행)
-  6. deploy → Vercel (master push + 모든 CI 통과 시)
+push / PR
+  │
+  ▼
+[1단계] build-and-test (병렬 불가, 순차 실행)
+  ├─ npm audit --audit-level=high --omit=dev  ← 알려진 보안 이슈 검출
+  ├─ ESLint                                   ← 코드 품질 정적 분석
+  ├─ tsc --noEmit                             ← 타입 오류 조기 발견
+  ├─ test:coverage                            ← 284개 테스트 + 커버리지 90%+
+  └─ build                                    ← 프로덕션 빌드 성공 여부
+  │
+  ▼ (1단계 통과 시)
+[2단계] e2e
+  ├─ build (E2E용 재빌드, dev 서버 아닌 prod 환경)
+  ├─ playwright install chromium
+  └─ test:e2e (홈 로딩·사이드바·검색 스모크)
+  │  실패 시 playwright-report 아티팩트 7일 보관
+  │
+  ▼ (master push + 1·2단계 통과 시)
+[3단계] deploy
+  └─ vercel --prod
 ```
+
+**2단계를 별도 job으로 분리한 이유**: E2E는 Playwright 브라우저 설치와 빌드 재실행으로 단위 테스트보다 실행 시간이 3~5배 길다. 1단계에서 단위 테스트가 실패하면 E2E job이 즉시 스킵되므로 불필요한 비용을 줄인다. 또한 실패 지점이 "단위 테스트 실패" vs "E2E 실패"로 명확히 분리되어 디버깅이 쉽다.
 
 **GitHub Secrets 설정**: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` 등록 완료.
 
-**롤백 전략**: Vercel 배포 실패 시 Dashboard → Deployments에서 이전 빌드 Promote to Production으로 즉시 롤백 가능 (다운타임 없음). CI 실패 시 master push 자체가 차단되어 broken build는 프로덕션에 도달하지 않음.
+**롤백 전략**:
+- CI 실패: master push 자체가 차단 — broken build는 프로덕션에 도달하지 않음
+- Vercel 배포 실패: Dashboard → Deployments → 이전 빌드 "Promote to Production" → 다운타임 없이 즉시 롤백
+- 런타임 오류 발견: 동일 방법으로 즉시 롤백, 이후 수정 커밋 후 재배포
 
 ## Notion API 마이그레이션 가이드
 
-현재 `loadPageChunk` 비공식 API → 공식 Notion API 전환 시 2개 파일만 교체:
+현재 `loadPageChunk` → 공식 Notion API 전환 시 2개 파일만 교체:
 
 ### 1. `src/lib/notion-structure.ts` 교체
 ```typescript
