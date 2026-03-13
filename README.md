@@ -126,8 +126,6 @@ src/
 
 인증이 필요한 공식 Notion API 대신 공개 페이지에 인증 없이 접근하는 `loadPageChunk` API를 사용합니다.
 
-> **참고**: 비공식 API이므로 Notion의 내부 변경에 영향을 받을 수 있습니다. 공식 Notion API 마이그레이션 시 `src/lib/notion-structure.ts`와 `src/app/api/notion/[pageId]/route.ts`만 교체하면 됩니다.
-
 ```
 기술지원 (루트 페이지 ID: 40e1f915...)
   └─ 처리방법이 궁금해요  →  blue
