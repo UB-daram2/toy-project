@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 import { getTopViewed, recordPageView } from "@/lib/view-tracker";
 import { extractPageIdFromUrl } from "@/lib/utils";
 import { NotionModal } from "./NotionModal";
+import { useWidgetStore, type WidgetId } from "@/stores/widgetStore";
+import { usePomodoro } from "@/hooks/usePomodoro";
 
 interface HomeViewProps {
   sections: KnowledgeSection[];
@@ -1050,52 +1052,10 @@ function BookmarkWidget() {
 }
 
 /** ── 포모도로 타이머 위젯 ── */
-const POMODORO_WORK_SECS = 25 * 60;
-const POMODORO_BREAK_SECS = 5 * 60;
-
+/** ── 포모도로 타이머 위젯 ── */
 function PomodoroWidget() {
-  const [mode, setMode] = useState<"work" | "break">("work");
-  const [timeLeft, setTimeLeft] = useState(POMODORO_WORK_SECS);
-  const [isRunning, setIsRunning] = useState(false);
-
-  // isRunning 상태에서 1초마다 카운트다운한다
-  useEffect(() => {
-    if (!isRunning) return;
-    const id = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          // 시간 종료 시 자동으로 반대 모드로 전환한다
-          setIsRunning(false);
-          setMode((m) => {
-            const next = m === "work" ? "break" : "work";
-            setTimeLeft(next === "work" ? POMODORO_WORK_SECS : POMODORO_BREAK_SECS);
-            return next;
-          });
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [isRunning]);
-
-  /** 현재 모드의 초기 시간으로 리셋한다 */
-  const reset = () => {
-    setIsRunning(false);
-    setTimeLeft(mode === "work" ? POMODORO_WORK_SECS : POMODORO_BREAK_SECS);
-  };
-
-  /** 모드를 전환하고 타이머를 리셋한다 */
-  const switchMode = (next: "work" | "break") => {
-    setMode(next);
-    setIsRunning(false);
-    setTimeLeft(next === "work" ? POMODORO_WORK_SECS : POMODORO_BREAK_SECS);
-  };
-
-  const totalSecs = mode === "work" ? POMODORO_WORK_SECS : POMODORO_BREAK_SECS;
-  const progress = ((totalSecs - timeLeft) / totalSecs) * 100;
-  const mins = String(Math.floor(timeLeft / 60)).padStart(2, "0");
-  const secs = String(timeLeft % 60).padStart(2, "0");
+  // 포모도로 타이머 로직을 커스텀 훅으로 분리하여 관심사를 분리한다
+  const { mode, isRunning, progress, mins, secs, toggle, reset, switchMode } = usePomodoro();
   const circumference = 2 * Math.PI * 44;
 
   return (
@@ -1154,7 +1114,7 @@ function PomodoroWidget() {
         {/* 컨트롤 버튼 */}
         <div className="flex gap-2">
           <button
-            onClick={() => setIsRunning((r) => !r)}
+            onClick={toggle}
             className={cn(
               "rounded-lg px-5 py-1.5 text-sm font-medium text-white transition-colors",
               mode === "work"
@@ -1264,17 +1224,7 @@ function WeeklyWeatherWidget() {
   );
 }
 
-/** ── 위젯 순서 관리 ── */
-type WidgetId =
-  | "recent" | "popular" | "weather" | "exchange" | "market"
-  | "memo" | "calendar" | "dday" | "bookmark" | "pomodoro" | "weekly-weather";
-
-const DEFAULT_WIDGET_ORDER: WidgetId[] = [
-  "recent", "popular", "weather", "exchange", "market",
-  "memo", "calendar", "dday", "bookmark", "pomodoro", "weekly-weather",
-];
-
-const WIDGET_ORDER_KEY = "upharm_widget_order";
+/** ── 위젯 순서 관리 — useWidgetStore (Zustand) 로 위임됨 ── */
 
 /** ── 홈 메인 뷰 ── */
 export function HomeView({ sections }: HomeViewProps) {
@@ -1283,44 +1233,14 @@ export function HomeView({ sections }: HomeViewProps) {
     title: string;
   } | null>(null);
 
-  // 위젯 순서 상태 (localStorage 로 영속화)
-  const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>(DEFAULT_WIDGET_ORDER);
-
-  // useEffect 로 localStorage를 읽어야 SSR 하이드레이션 불일치를 방지한다
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(WIDGET_ORDER_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as WidgetId[];
-        // 저장된 순서에 모든 기본 위젯이 포함된 경우에만 사용한다
-        if (DEFAULT_WIDGET_ORDER.every((id) => parsed.includes(id))) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setWidgetOrder(parsed);
-        }
-      }
-    } catch { /* ignore */ }
-  }, []);
+  // 위젯 순서 — Zustand 스토어에서 가져온다 (persist 미들웨어로 localStorage 자동 영속화)
+  const { widgetOrder, reorder: reorderWidgets } = useWidgetStore();
   // 현재 드래그 중인 위젯 ID와 드롭 대상 위젯 ID를 ref 로 추적한다
   // (상태 업데이트 전 이벤트 핸들러에서 참조하기 위해 ref 사용)
   const draggingIdRef = useRef<WidgetId | null>(null);
   const dropTargetIdRef = useRef<WidgetId | null>(null);
   const [draggingId, setDraggingId] = useState<WidgetId | null>(null);
   const [dropTargetId, setDropTargetId] = useState<WidgetId | null>(null);
-
-  /** 위젯 순서를 변경하고 localStorage 에 저장한다 */
-  const commitReorder = (fromId: WidgetId, toId: WidgetId) => {
-    if (fromId === toId) return;
-    setWidgetOrder((prev) => {
-      const next = [...prev];
-      const from = next.indexOf(fromId);
-      const to = next.indexOf(toId);
-      if (from < 0 || to < 0) return prev;
-      next.splice(from, 1);
-      next.splice(to, 0, fromId);
-      try { localStorage.setItem(WIDGET_ORDER_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-      return next;
-    });
-  };
 
   // ── HTML5 DnD 핸들러 (마우스 / 트랙패드) ──
   const handleDragStart = (e: React.DragEvent, id: WidgetId) => {
@@ -1337,7 +1257,7 @@ export function HomeView({ sections }: HomeViewProps) {
 
   const handleDragEnd = () => {
     if (draggingIdRef.current && dropTargetIdRef.current) {
-      commitReorder(draggingIdRef.current, dropTargetIdRef.current);
+      reorderWidgets(draggingIdRef.current, dropTargetIdRef.current);
     }
     draggingIdRef.current = null;
     dropTargetIdRef.current = null;
@@ -1369,7 +1289,7 @@ export function HomeView({ sections }: HomeViewProps) {
 
   const handleHandlePointerUp = () => {
     if (draggingIdRef.current && dropTargetIdRef.current) {
-      commitReorder(draggingIdRef.current, dropTargetIdRef.current);
+      reorderWidgets(draggingIdRef.current, dropTargetIdRef.current);
     }
     draggingIdRef.current = null;
     dropTargetIdRef.current = null;

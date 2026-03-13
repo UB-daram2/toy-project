@@ -27,9 +27,8 @@ interface RichTextItem {
 interface NotionBlock {
   id: string;
   type: string;
-  // 블록 타입별 데이터는 동적으로 접근
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  // 블록 타입별 데이터는 타입 단언으로 접근
+  [key: string]: unknown;
 }
 
 /** 모달 내비게이션 항목 */
@@ -315,12 +314,12 @@ export function NotionModal({ pageUrl, pageTitle, onClose }: NotionModalProps) {
       role="dialog"
       aria-modal="true"
       aria-label={currentPage.title}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative flex h-full max-h-[80vh] w-full max-w-3xl flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="relative flex h-full max-h-[92dvh] w-full max-w-3xl flex-col rounded-t-2xl border border-gray-200 bg-white shadow-2xl sm:max-h-[80vh] sm:rounded-2xl dark:border-zinc-800 dark:bg-zinc-900">
         {/* 헤더: 뒤로가기 + 제목 + Notion 열기 + 닫기 */}
         <div className="flex items-center gap-2 border-b border-gray-200 px-4 py-3 dark:border-zinc-800">
           {/* 뒤로가기 버튼 (서브페이지 이동 시에만 표시) */}

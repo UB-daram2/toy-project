@@ -40,6 +40,20 @@ const SECTION_UI_CONFIG: Record<
   },
 };
 
+/** loadPageChunk 응답의 recordMap.block 개별 항목 */
+interface NotionRawBlockValue {
+  id: string;
+  type: string;
+  content?: string[];
+  last_edited_time?: number;
+  properties?: Record<string, unknown[][]>;
+  format?: Record<string, unknown>;
+}
+
+interface NotionRawBlock {
+  value: NotionRawBlockValue;
+}
+
 /** UUID 형식의 ID에서 하이픈을 제거하여 32자리 ID로 변환 */
 function stripHyphens(id: string): string {
   return id.replace(/-/g, "");
@@ -52,8 +66,7 @@ function formatPageId(pageId: string): string {
 }
 
 /** Notion 내부 API(loadPageChunk)로 페이지 블록 맵을 가져온다 */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchBlockMap(pageId: string): Promise<Record<string, any>> {
+async function fetchBlockMap(pageId: string): Promise<Record<string, NotionRawBlock>> {
   const formattedId = formatPageId(pageId);
   try {
     const res = await fetch("https://www.notion.so/api/v3/loadPageChunk", {
@@ -78,10 +91,9 @@ async function fetchBlockMap(pageId: string): Promise<Record<string, any>> {
 }
 
 /** 블록의 properties.title 배열에서 텍스트 내용을 추출한다 */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractTitle(blockValue: any): string {
+function extractTitle(blockValue: NotionRawBlockValue | undefined): string {
   return (blockValue?.properties?.title ?? [])
-    .map((segment: unknown[]) => (segment[0] as string) ?? "")
+    .map((segment) => (segment[0] as string) ?? "")
     .join("");
 }
 
@@ -136,14 +148,14 @@ async function parseSectionCategories(
   const categoryBlocks = contentIds
     .map((id) => blockMap[id]?.value)
     .filter(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (block): block is Record<string, any> => block?.type === "page"
+      (block): block is NotionRawBlockValue =>
+        block !== undefined && block.type === "page"
     );
 
   // 각 카테고리 페이지의 링크를 병렬로 가져온다
   const categories = await Promise.all(
     categoryBlocks.map(async (categoryBlock) => {
-      const categoryId = categoryBlock.id as string;
+      const categoryId = categoryBlock.id;
       const categoryTitle = extractTitle(categoryBlock);
       const links = await fetchCategoryLinks(categoryId);
       return {

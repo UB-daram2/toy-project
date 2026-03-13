@@ -12,9 +12,34 @@ function formatPageId(pageId: string): string {
   return `${pageId.slice(0, 8)}-${pageId.slice(8, 12)}-${pageId.slice(12, 16)}-${pageId.slice(16, 20)}-${pageId.slice(20)}`;
 }
 
+/** Notion 내부 세그먼트: [텍스트, 장식 배열?] */
+type NotionSegment = [string, ([string, string?])[]?];
+
+/** Notion 내부 블록 속성 (loadPageChunk 응답) */
+interface NotionBlockValue {
+  type: string;
+  properties?: {
+    title?: NotionSegment[];
+    checked?: NotionSegment[];
+    source?: NotionSegment[];
+    language?: NotionSegment[];
+  };
+  format?: {
+    display_source?: string;
+    page_icon?: string;
+  };
+  content?: string[];
+}
+
+/** 공식 Notion API 형식으로 변환된 블록 */
+interface ConvertedBlock {
+  id: string;
+  type: string;
+  [key: string]: unknown;
+}
+
 /** Notion 내부 Rich Text 세그먼트를 공식 API Rich Text 형식으로 변환 */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function convertRichText(segments: any[][] | undefined): {
+function convertRichText(segments: NotionSegment[] | undefined): {
   plain_text: string;
   href: string | null;
   annotations: {
@@ -72,19 +97,17 @@ const TYPE_MAP: Record<string, string> = {
 };
 
 /** 내부 블록 값을 공식 API 형식으로 변환 */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function convertBlock(id: string, blockValue: any): Record<string, any> | null {
+function convertBlock(id: string, blockValue: NotionBlockValue): ConvertedBlock | null {
   const internalType: string = blockValue.type;
   const officialType = TYPE_MAP[internalType];
   // 지원하지 않는 블록 타입은 null 반환
   if (!officialType) return null;
 
-  const properties = blockValue.properties ?? {};
-  const format = blockValue.format ?? {};
-  const richText = convertRichText(properties.title);
+  const properties = blockValue.properties;
+  const format = blockValue.format;
+  const richText = convertRichText(properties?.title);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const block: Record<string, any> = { id, type: officialType };
+  const block: ConvertedBlock = { id, type: officialType };
 
   switch (officialType) {
     case "paragraph":
@@ -101,7 +124,7 @@ function convertBlock(id: string, blockValue: any): Record<string, any> | null {
       // 내부 API에서 checked 상태는 properties.checked = [["Yes"]] 형식
       block[officialType] = {
         rich_text: richText,
-        checked: properties.checked?.[0]?.[0] === "Yes",
+        checked: properties?.checked?.[0]?.[0] === "Yes",
       };
       break;
     case "divider":
@@ -110,21 +133,21 @@ function convertBlock(id: string, blockValue: any): Record<string, any> | null {
     case "code":
       block[officialType] = {
         rich_text: richText,
-        language: properties.language?.[0]?.[0] ?? "plain text",
+        language: properties?.language?.[0]?.[0] ?? "plain text",
       };
       break;
     case "callout":
       block[officialType] = {
         rich_text: richText,
-        icon: format.page_icon ? { emoji: format.page_icon } : undefined,
+        icon: format?.page_icon ? { emoji: format.page_icon } : undefined,
       };
       break;
     case "image": {
       // display_source(외부 이미지) 또는 source(업로드 이미지)에서 URL 추출
       const imageUrl: string =
-        format.display_source ?? properties.source?.[0]?.[0] ?? "";
+        format?.display_source ?? properties?.source?.[0]?.[0] ?? "";
       block[officialType] = imageUrl
-        ? format.display_source
+        ? format?.display_source
           ? { external: { url: imageUrl } }
           : { file: { url: imageUrl } }
         : {};
