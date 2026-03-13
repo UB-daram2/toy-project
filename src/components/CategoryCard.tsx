@@ -11,8 +11,9 @@
 import { useState } from "react";
 import { ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 import { KnowledgeCategory } from "@/data/knowledge-base";
-import { cn, getSectionColorClasses } from "@/lib/utils";
+import { cn, getSectionColorClasses, extractPageIdFromUrl } from "@/lib/utils";
 import { NotionModal } from "./NotionModal";
+import { recordPageView } from "@/lib/view-tracker";
 
 /** 더 보기 없이 표시할 링크 최대 개수 */
 const PREVIEW_COUNT = 6;
@@ -67,7 +68,12 @@ export function CategoryCard({ category, colorKey }: CategoryCardProps) {
             <li key={link.id} className="group flex items-center gap-2 px-3 py-1.5 transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800/60">
               {/* 링크 제목: 클릭 시 Notion 내용 모달 표시 */}
               <button
-                onClick={() => setActiveModal({ url: link.url, title: link.title })}
+                onClick={() => {
+                  // 열람 수 기록: 모달 열릴 때마다 카운트 증가
+                  const pageId = extractPageIdFromUrl(link.url);
+                  if (pageId) recordPageView(pageId, link.title, link.url);
+                  setActiveModal({ url: link.url, title: link.title });
+                }}
                 className={cn(
                   "flex-1 truncate text-left text-sm",
                   "text-gray-600 transition-colors hover:text-gray-900",

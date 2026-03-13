@@ -8,6 +8,8 @@ export interface KnowledgeLink {
   id: string;
   title: string;
   url: string;
+  /** Notion 블록의 마지막 수정 시각 (Unix ms). 동적 로딩 시 채워진다 */
+  lastEditedTime?: number;
 }
 
 /** 카테고리 그룹 (예: 유팜시스템, VAN Plus) */

@@ -15,6 +15,7 @@ import {
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { SectionView } from "./SectionView";
+import { HomeView } from "./HomeView";
 
 interface DashboardProps {
   /** 표시할 지식베이스 섹션 목록. 미전달 시 정적 데이터를 사용한다 */
@@ -22,10 +23,8 @@ interface DashboardProps {
 }
 
 export function Dashboard({ sections = knowledgeSections }: DashboardProps) {
-  // 현재 활성 섹션 ID (초기값: 첫 번째 섹션)
-  const [activeSectionId, setActiveSectionId] = useState<string>(
-    sections[0]?.id ?? ""
-  );
+  // 현재 활성 섹션 ID (초기값: "home")
+  const [activeSectionId, setActiveSectionId] = useState<string>("home");
 
   // 검색어 상태
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -72,7 +71,10 @@ export function Dashboard({ sections = knowledgeSections }: DashboardProps) {
 
         {/* 콘텐츠 영역 */}
         <main className="flex-1 overflow-y-auto bg-gray-50 px-6 py-6 dark:bg-zinc-950">
-          {activeSectionData ? (
+          {/* 홈 뷰: Top5 위젯 + 날씨 */}
+          {activeSectionId === "home" ? (
+            <HomeView sections={sections} />
+          ) : activeSectionData ? (
             <SectionView
               section={activeSectionData}
               isSearchResult={!!searchQuery.trim()}

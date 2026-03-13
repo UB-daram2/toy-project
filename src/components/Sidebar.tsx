@@ -5,7 +5,7 @@
  * 메인 섹션 목록을 표시하고 활성 섹션을 강조한다.
  */
 
-import { BookOpen, HelpCircle, Download } from "lucide-react";
+import { BookOpen, HelpCircle, Download, LayoutDashboard } from "lucide-react";
 import { KnowledgeSection } from "@/data/knowledge-base";
 import { cn, getSectionColorClasses } from "@/lib/utils";
 
@@ -37,6 +37,27 @@ export function Sidebar({ sections, activeSectionId, onSectionSelect }: SidebarP
 
       {/* 섹션 네비게이션 목록 */}
       <nav className="flex flex-col gap-1">
+        {/* 홈 버튼 */}
+        <button
+          onClick={() => onSectionSelect("home")}
+          className={cn(
+            "group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all duration-150",
+            activeSectionId === "home"
+              ? "bg-gray-100 text-indigo-600 dark:bg-zinc-800 dark:text-indigo-400"
+              : "text-gray-500 hover:bg-gray-50 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+          )}
+        >
+          <LayoutDashboard
+            className={cn(
+              "h-4 w-4 flex-shrink-0",
+              activeSectionId === "home"
+                ? "text-indigo-600 dark:text-indigo-400"
+                : "text-gray-400 group-hover:text-gray-700 dark:text-zinc-500 dark:group-hover:text-zinc-300"
+            )}
+          />
+          <span className="flex-1 truncate text-sm font-medium">홈</span>
+        </button>
+
         {sections.map((section) => {
           const isActive = section.id === activeSectionId;
           const colorClasses = getSectionColorClasses(section.colorKey);

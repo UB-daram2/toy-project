@@ -105,11 +105,14 @@ async function fetchCategoryLinks(
       // 서브페이지 타입만 링크로 수집한다
       if (!block || block.type !== "page") return null;
       const linkId = stripHyphens(id);
-      return {
+      const entry: KnowledgeLink = {
         id: `${linkId}-link`,
         title: extractTitle(block),
         url: `https://www.notion.so/${linkId}`,
-      } satisfies KnowledgeLink;
+        // Notion 블록의 마지막 수정 시각 (Unix ms) — 최근 수정 위젯에서 사용
+        lastEditedTime: block.last_edited_time as number | undefined,
+      };
+      return entry;
     })
     .filter((link): link is KnowledgeLink => link !== null);
 }
