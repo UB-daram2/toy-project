@@ -37,6 +37,21 @@ interface WidgetState {
 }
 
 /**
+ * persist 미들웨어의 merge 함수
+ * 저장된 순서가 유효한(모든 기본 위젯 포함) 경우에만 복원하고, 아니면 현재 상태를 유지한다.
+ */
+export function mergeWidgetState(persisted: unknown, current: WidgetState): WidgetState {
+  const p = persisted as Partial<WidgetState>;
+  if (
+    Array.isArray(p.widgetOrder) &&
+    DEFAULT_WIDGET_ORDER.every((id) => p.widgetOrder!.includes(id))
+  ) {
+    return { ...current, widgetOrder: p.widgetOrder! };
+  }
+  return current;
+}
+
+/**
  * 위젯 순서 스토어
  * zustand/persist 미들웨어로 localStorage에 자동 저장된다.
  */
@@ -64,16 +79,7 @@ export const useWidgetStore = create<WidgetState>()(
     {
       name: "upharm_widget_order",
       // 저장된 순서에 모든 기본 위젯이 포함된 경우에만 복원한다
-      merge: (persisted, current) => {
-        const p = persisted as Partial<WidgetState>;
-        if (
-          Array.isArray(p.widgetOrder) &&
-          DEFAULT_WIDGET_ORDER.every((id) => p.widgetOrder!.includes(id))
-        ) {
-          return { ...current, widgetOrder: p.widgetOrder! };
-        }
-        return current;
-      },
+      merge: mergeWidgetState,
     }
   )
 );

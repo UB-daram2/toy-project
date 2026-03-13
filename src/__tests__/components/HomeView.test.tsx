@@ -7,6 +7,10 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { HomeView } from "@/components/HomeView";
 import { recordPageView } from "@/lib/view-tracker";
 import type { KnowledgeSection } from "@/data/knowledge-base";
+import { useMemoStore } from "@/stores/memoStore";
+import { useDDayStore } from "@/stores/ddayStore";
+import { useBookmarkStore } from "@/stores/bookmarkStore";
+import { useWidgetStore, DEFAULT_WIDGET_ORDER } from "@/stores/widgetStore";
 
 // NotionModal 모킹
 jest.mock("@/components/NotionModal", () => ({
@@ -121,6 +125,11 @@ beforeEach(() => {
   localStorage.clear();
   mockFetch.mockReset();
   mockAllSuccess();
+  // 각 테스트 전에 Zustand 스토어를 초기 상태로 리셋한다
+  useMemoStore.setState({ memos: [] });
+  useDDayStore.setState({ ddays: [] });
+  useBookmarkStore.setState({ bookmarks: [] });
+  useWidgetStore.setState({ widgetOrder: [...DEFAULT_WIDGET_ORDER] });
 });
 
 describe("HomeView — 기본 렌더링", () => {
@@ -841,57 +850,49 @@ describe("HomeView — 주간 날씨 예보 위젯", () => {
   });
 });
 
-describe("HomeView — localStorage 복원", () => {
-  it("유효한 메모 JSON이 있으면 메모를 복원한다", async () => {
-    const stored = JSON.stringify([{ id: "1", text: "저장된메모", createdAt: Date.now() }]);
-    localStorage.setItem("upharm_memos", stored);
+describe("HomeView — 스토어 상태 복원", () => {
+  it("메모 스토어에 데이터가 있으면 메모를 표시한다", () => {
+    useMemoStore.setState({ memos: [{ id: "1", text: "저장된메모", createdAt: Date.now() }] });
     render(<HomeView sections={sampleSections} />);
-    await waitFor(() => expect(screen.getByText("저장된메모")).toBeInTheDocument());
+    expect(screen.getByText("저장된메모")).toBeInTheDocument();
   });
 
-  it("손상된 메모 JSON이 있어도 빈 목록으로 정상 렌더링한다", () => {
-    localStorage.setItem("upharm_memos", "invalid-json{{{");
+  it("메모 스토어가 비어있으면 빈 상태 메시지를 표시한다", () => {
     render(<HomeView sections={sampleSections} />);
     expect(screen.getByText("메모가 없습니다")).toBeInTheDocument();
   });
 
-  it("유효한 D-Day JSON이 있으면 복원한다", async () => {
-    const stored = JSON.stringify([{ id: "1", title: "복원이벤트", targetDate: "2099-01-01" }]);
-    localStorage.setItem("upharm_ddays", stored);
+  it("D-Day 스토어에 데이터가 있으면 표시한다", () => {
+    useDDayStore.setState({ ddays: [{ id: "1", title: "복원이벤트", targetDate: "2099-01-01" }] });
     render(<HomeView sections={sampleSections} />);
-    await waitFor(() => expect(screen.getByText("복원이벤트")).toBeInTheDocument());
+    expect(screen.getByText("복원이벤트")).toBeInTheDocument();
   });
 
-  it("손상된 D-Day JSON이 있어도 빈 목록으로 정상 렌더링한다", () => {
-    localStorage.setItem("upharm_ddays", "not-valid");
+  it("D-Day 스토어가 비어있으면 빈 상태 메시지를 표시한다", () => {
     render(<HomeView sections={sampleSections} />);
     expect(screen.getByText("D-Day가 없습니다")).toBeInTheDocument();
   });
 
-  it("유효한 북마크 JSON이 있으면 복원한다", async () => {
-    const stored = JSON.stringify([{ id: "1", title: "복원북마크", url: "https://example.com" }]);
-    localStorage.setItem("upharm_bookmarks", stored);
+  it("북마크 스토어에 데이터가 있으면 표시한다", () => {
+    useBookmarkStore.setState({ bookmarks: [{ id: "1", title: "복원북마크", url: "https://example.com" }] });
     render(<HomeView sections={sampleSections} />);
-    await waitFor(() => expect(screen.getByText("복원북마크")).toBeInTheDocument());
+    expect(screen.getByText("복원북마크")).toBeInTheDocument();
   });
 
-  it("손상된 북마크 JSON이 있어도 빈 목록으로 정상 렌더링한다", () => {
-    localStorage.setItem("upharm_bookmarks", "{{bad");
+  it("북마크 스토어가 비어있으면 빈 상태 메시지를 표시한다", () => {
     render(<HomeView sections={sampleSections} />);
     expect(screen.getByText("저장된 북마크가 없습니다")).toBeInTheDocument();
   });
 
-  it("유효한 위젯 순서가 저장되어 있으면 복원한다", async () => {
+  it("위젯 순서 스토어에 유효한 순서가 있으면 복원한다", () => {
     const order = ["popular", "recent", "weather", "exchange", "market", "memo", "calendar", "dday", "bookmark", "pomodoro", "weekly-weather"];
-    localStorage.setItem("upharm_widget_order", JSON.stringify(order));
+    useWidgetStore.setState({ widgetOrder: order as import("@/stores/widgetStore").WidgetId[] });
     render(<HomeView sections={sampleSections} />);
-    // 순서 복원 후에도 모든 위젯이 표시되어야 한다
-    await waitFor(() => expect(screen.getByText("최근 수정 Top 5")).toBeInTheDocument());
+    expect(screen.getByText("최근 수정 Top 5")).toBeInTheDocument();
     expect(screen.getByText("많이 본 게시물 Top 5")).toBeInTheDocument();
   });
 
-  it("손상된 위젯 순서 JSON이 있어도 기본 순서로 정상 렌더링한다", () => {
-    localStorage.setItem("upharm_widget_order", "bad-json");
+  it("기본 위젯 순서로 모든 위젯이 렌더링된다", () => {
     render(<HomeView sections={sampleSections} />);
     expect(screen.getByText("최근 수정 Top 5")).toBeInTheDocument();
   });
@@ -979,13 +980,9 @@ describe("HomeView — 북마크 URL 처리", () => {
 });
 
 describe("HomeView — 위젯 순서 불완전 복원", () => {
-  it("저장된 위젯 순서에 기본 위젯이 누락된 경우 기본 순서를 사용한다", async () => {
-    // 일부 위젯만 포함된 불완전한 순서
-    const partialOrder = ["recent", "weather", "exchange"];
-    localStorage.setItem("upharm_widget_order", JSON.stringify(partialOrder));
+  it("위젯 스토어에 기본 순서로 모든 위젯이 렌더링된다", () => {
     render(<HomeView sections={sampleSections} />);
-    // 기본 순서로 렌더링되어 모든 위젯이 표시되어야 한다
-    await waitFor(() => expect(screen.getByText("최근 수정 Top 5")).toBeInTheDocument());
+    expect(screen.getByText("최근 수정 Top 5")).toBeInTheDocument();
     expect(screen.getByText("D-Day 카운터")).toBeInTheDocument();
   });
 });

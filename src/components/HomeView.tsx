@@ -20,6 +20,9 @@ import { getTopViewed, recordPageView } from "@/lib/view-tracker";
 import { extractPageIdFromUrl } from "@/lib/utils";
 import { NotionModal } from "./NotionModal";
 import { useWidgetStore, type WidgetId } from "@/stores/widgetStore";
+import { useMemoStore } from "@/stores/memoStore";
+import { useDDayStore } from "@/stores/ddayStore";
+import { useBookmarkStore } from "@/stores/bookmarkStore";
 import { usePomodoro } from "@/hooks/usePomodoro";
 
 interface HomeViewProps {
@@ -557,52 +560,16 @@ function StockWidget() {
 }
 
 /** ── 메모 위젯 ── */
-const MEMO_STORAGE_KEY = "upharm_memos";
-
-interface Memo {
-  id: string;
-  text: string;
-  createdAt: number;
-}
-
 function MemoWidget() {
-  const [memos, setMemos] = useState<Memo[]>([]);
+  // 메모 상태는 Zustand 스토어가 관리한다 (persist 미들웨어로 localStorage 자동 영속화)
+  const { memos, addMemo: storAddMemo, removeMemo } = useMemoStore();
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // useEffect 로 localStorage를 읽어야 SSR 하이드레이션 불일치를 방지한다
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(MEMO_STORAGE_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (stored) setMemos(JSON.parse(stored) as Memo[]);
-    } catch { /* localStorage 접근 불가 시 무시 */ }
-  }, []);
-
-  /** 메모 목록을 저장하고 상태를 동기화한다 */
-  const save = (next: Memo[]) => {
-    setMemos(next);
-    try {
-      localStorage.setItem(MEMO_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      /* 저장 공간 부족 시 무시 */
-    }
-  };
-
   const addMemo = () => {
-    const text = input.trim();
-    if (!text) return;
-    const next: Memo[] = [
-      { id: `${Date.now()}`, text, createdAt: Date.now() },
-      ...memos,
-    ].slice(0, 20); // 최대 20개 보관
-    save(next);
+    storAddMemo(input);
     setInput("");
     inputRef.current?.focus();
-  };
-
-  const deleteMemo = (id: string) => {
-    save(memos.filter((m) => m.id !== id));
   };
 
   return (
@@ -647,7 +614,7 @@ function MemoWidget() {
                 {memo.text}
               </p>
               <button
-                onClick={() => deleteMemo(memo.id)}
+                onClick={() => removeMemo(memo.id)}
                 aria-label="메모 삭제"
                 className="mt-0.5 flex-shrink-0 text-gray-300 transition-colors hover:text-red-400 dark:text-zinc-600 dark:hover:text-red-400"
               >
@@ -791,13 +758,6 @@ function CalendarWidget() {
 }
 
 /** ── D-Day 카운터 위젯 ── */
-const DDAY_STORAGE_KEY = "upharm_ddays";
-
-interface DDay {
-  id: string;
-  title: string;
-  targetDate: string; // YYYY-MM-DD
-}
 
 /** 목표 날짜까지 남은 일수를 계산한다 (양수=미래, 0=당일, 음수=과거) */
 function calcDDay(targetDate: string): number {
@@ -807,30 +767,15 @@ function calcDDay(targetDate: string): number {
 }
 
 function DDayWidget() {
-  const [ddays, setDdays] = useState<DDay[]>([]);
+  // D-Day 상태는 Zustand 스토어가 관리한다 (persist 미들웨어로 localStorage 자동 영속화)
+  const { ddays, addDDay: storeAddDDay, removeDDay } = useDDayStore();
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDate, setNewDate] = useState("");
 
-  // useEffect 로 localStorage를 읽어야 SSR 하이드레이션 불일치를 방지한다
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(DDAY_STORAGE_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (stored) setDdays(JSON.parse(stored) as DDay[]);
-    } catch { /* ignore */ }
-  }, []);
-
-  const saveDDays = (next: DDay[]) => {
-    setDdays(next);
-    try { localStorage.setItem(DDAY_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-  };
-
   const addDDay = () => {
     if (!newTitle.trim() || !newDate) return;
-    const next = [...ddays, { id: `${Date.now()}`, title: newTitle.trim(), targetDate: newDate }]
-      .sort((a, b) => a.targetDate.localeCompare(b.targetDate));
-    saveDDays(next);
+    storeAddDDay(newTitle, newDate);
     setNewTitle("");
     setNewDate("");
     setIsAdding(false);
@@ -870,7 +815,7 @@ function DDayWidget() {
                   {label}
                 </span>
                 <button
-                  onClick={() => saveDDays(ddays.filter((x) => x.id !== d.id))}
+                  onClick={() => removeDDay(d.id)}
                   aria-label={`${d.title} 삭제`}
                   className="flex-shrink-0 text-gray-300 transition-colors hover:text-red-400 dark:text-zinc-600 dark:hover:text-red-400"
                 >
@@ -928,39 +873,16 @@ function DDayWidget() {
 }
 
 /** ── 북마크 위젯 ── */
-const BOOKMARK_STORAGE_KEY = "upharm_bookmarks";
-
-interface BookmarkItem {
-  id: string;
-  title: string;
-  url: string;
-}
-
 function BookmarkWidget() {
-  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
+  // 북마크 상태는 Zustand 스토어가 관리한다 (persist 미들웨어로 localStorage 자동 영속화)
+  const { bookmarks, addBookmark: storeAddBookmark, removeBookmark } = useBookmarkStore();
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newUrl, setNewUrl] = useState("");
 
-  // useEffect 로 localStorage를 읽어야 SSR 하이드레이션 불일치를 방지한다
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(BOOKMARK_STORAGE_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (stored) setBookmarks(JSON.parse(stored) as BookmarkItem[]);
-    } catch { /* ignore */ }
-  }, []);
-
-  const saveBookmarks = (next: BookmarkItem[]) => {
-    setBookmarks(next);
-    try { localStorage.setItem(BOOKMARK_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-  };
-
   const addBookmark = () => {
     if (!newTitle.trim() || !newUrl.trim()) return;
-    // 프로토콜이 없으면 https:// 를 자동으로 붙인다
-    const href = newUrl.startsWith("http") ? newUrl.trim() : `https://${newUrl.trim()}`;
-    saveBookmarks([...bookmarks, { id: `${Date.now()}`, title: newTitle.trim(), url: href }]);
+    storeAddBookmark(newTitle, newUrl);
     setNewTitle("");
     setNewUrl("");
     setIsAdding(false);
@@ -995,7 +917,7 @@ function BookmarkWidget() {
                 <span className="truncate">{b.title}</span>
               </a>
               <button
-                onClick={() => saveBookmarks(bookmarks.filter((x) => x.id !== b.id))}
+                onClick={() => removeBookmark(b.id)}
                 aria-label={`${b.title} 삭제`}
                 className="flex-shrink-0 text-gray-300 transition-colors hover:text-red-400 dark:text-zinc-600 dark:hover:text-red-400"
               >

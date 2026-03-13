@@ -33,7 +33,7 @@ Notion 최상위 페이지(`기술지원`)에서 섹션 → 카테고리 → 링
 - **Frankfurter API**: 인증 불필요한 무료 환율 API (1 USD 기준 KRW·EUR·JPY·CNY)
 - **Yahoo Finance 프록시**: CORS 제약으로 서버사이드 Next.js API Route(`/api/market`)를 통해 우회
 - **date.nager.at API**: 한국 공휴일 데이터 (인증 불필요, CORS 허용)
-- **useEffect + eslint-disable로 localStorage 로딩**: `useState` lazy initializer는 SSR 하이드레이션 불일치를 유발하므로 `useEffect`에서 로딩 후 `eslint-disable-next-line react-hooks/set-state-in-effect`로 규칙을 비활성화
+- **영속 상태 전량 Zustand persist 스토어 이관**: `useState` lazy initializer / `useEffect + localStorage.getItem` 패턴은 SSR 하이드레이션 불일치를 유발하므로, 메모·D-Day·북마크·위젯 순서 모두 `zustand/persist` 미들웨어로 관리 (`upharm_memos`, `upharm_ddays`, `upharm_bookmarks`, `upharm_widget_order`). `eslint-disable-next-line react-hooks/set-state-in-effect`는 async fetch 내 setState에 한해서만 허용
 - **드래그앤드롭 이중 구현**: 마우스는 HTML5 DnD API, 터치는 Pointer Events API + `setPointerCapture`로 별도 구현 (HTML5 DnD는 터치에서 불안정)
 
 ## 기술 스택
@@ -41,10 +41,10 @@ Notion 최상위 페이지(`기술지원`)에서 섹션 → 카테고리 → 링
 - **Next.js 16** (App Router, Async Server Components)
 - **TypeScript** (strict mode, `any` 사용 금지)
 - **Tailwind CSS v4** (`auto-rows-[300px]` 그리드로 균일 카드 높이)
-- **Zustand** (persist 미들웨어로 위젯 순서 상태 관리 + localStorage 자동 영속화)
+- **Zustand** (persist 미들웨어로 위젯 순서 + 메모 + D-Day + 북마크 상태 관리 + localStorage 자동 영속화)
 - **next-themes** (다크모드)
 - **lucide-react** (아이콘)
-- **Jest + React Testing Library** (테스트, 커버리지 90% 이상 강제)
+- **Jest + React Testing Library** (테스트 250개, 커버리지 99%+, 90% 이상 강제)
 - **Playwright** (E2E 스모크 테스트)
 
 ## 빌드 & 테스트
@@ -79,6 +79,9 @@ src/lib/view-tracker.ts               ← localStorage 열람 수 추적 (클라
 src/lib/utils.ts                      ← cn, 색상 클래스, URL 파싱
 src/data/knowledge-base.ts            ← 타입 정의 + 정적 폴백 데이터 + 검색 유틸
 src/stores/widgetStore.ts             ← Zustand persist 스토어 (위젯 순서 상태)
+src/stores/memoStore.ts               ← Zustand persist 스토어 (메모 목록, 최대 20개)
+src/stores/ddayStore.ts               ← Zustand persist 스토어 (D-Day 목록, 날짜 오름차순)
+src/stores/bookmarkStore.ts           ← Zustand persist 스토어 (북마크 목록)
 src/hooks/usePomodoro.ts              ← 포모도로 타이머 커스텀 훅 (관심사 분리)
 ```
 
@@ -91,10 +94,10 @@ src/hooks/usePomodoro.ts              ← 포모도로 타이머 커스텀 훅 (
 | 날씨 & 미세먼지 | `WeatherWidget` | Open-Meteo (현재 날씨 + 대기질) |
 | 환율 | `ExchangeRateWidget` | Frankfurter API |
 | 국내 증시 | `StockWidget` | `/api/market` (Yahoo Finance 프록시) |
-| 메모 | `MemoWidget` | localStorage (최대 20개) |
+| 메모 | `MemoWidget` | Zustand `useMemoStore` (최대 20개) |
 | 미니 캘린더 | `CalendarWidget` | date.nager.at (공휴일) |
-| D-Day 카운터 | `DDayWidget` | localStorage (날짜 오름차순 정렬) |
-| 북마크 | `BookmarkWidget` | localStorage |
+| D-Day 카운터 | `DDayWidget` | Zustand `useDDayStore` (날짜 오름차순 정렬) |
+| 북마크 | `BookmarkWidget` | Zustand `useBookmarkStore` |
 | 포모도로 타이머 | `PomodoroWidget` | 내부 상태 (집중 25분 / 휴식 5분) |
 | 주간 날씨 예보 | `WeeklyWeatherWidget` | Open-Meteo (7일 daily forecast) |
 
@@ -105,7 +108,7 @@ src/hooks/usePomodoro.ts              ← 포모도로 타이머 커스텀 훅 (
 - **터치 (Pointer Events)**: `onPointerDown` → `onPointerMove` → `onPointerUp`/`onPointerCancel`
   - `setPointerCapture`로 포인터 이벤트를 핸들 요소에 캡처
   - `document.elementFromPoint`로 포인터 아래의 위젯 카드 탐지
-- `commitReorder`: `useWidgetStore.reorder(fromId, toId)` 호출로 상태 업데이트 (스테일 클로저 방지)
+- `reorderWidgets(fromId, toId)`: `useWidgetStore.reorder()` 직접 호출로 상태 업데이트 (스테일 클로저 방지)
 
 ### 데이터 흐름
 
@@ -128,10 +131,64 @@ src/hooks/usePomodoro.ts              ← 포모도로 타이머 커스텀 훅 (
 ## 작성 규칙
 
 - 실제 동작하는 코드만 작성 (미구현 stub 금지)
-- 테스트 커버리지 90% 이상 유지
+- 테스트 커버리지 90% 이상 유지 (전역 기준: 현재 99%+)
 - 기능을 명확히 나타내는 이름 사용 (약어/모호한 이름 금지)
 - 로직 블록마다 반드시 주석 작성
-- localStorage는 반드시 `useEffect` 안에서 접근 (`useState` lazy initializer 사용 금지 — SSR 하이드레이션 불일치 유발)
+- **영속 상태는 반드시 Zustand persist 스토어로 관리** — `localStorage` 직접 접근 금지 (SSR 하이드레이션 불일치 유발)
+  - 예외: `MostViewedWidget`(열람 수 집계), widgetOrder — 이미 스토어화 완료
+  - `eslint-disable-next-line react-hooks/set-state-in-effect`는 async fetch 함수 내 setState에 한해 허용
+
+## 테스트 전략
+
+### 단위 · 통합 테스트 (Jest + React Testing Library)
+
+| 대상 | 전략 |
+|------|------|
+| Zustand 스토어 | `store.getState()` 직접 호출로 상태·액션 검증 |
+| 커스텀 훅 | `renderHook` + `act` + fake timer |
+| 위젯 컴포넌트 | `store.setState()` 로 초기 데이터 주입 후 DOM 검증 |
+| API Route | `fetch` 모킹 후 응답 형식·에러 분기 검증 |
+| 전체 커버리지 | 90% 이상 강제 (jest.config.ts `coverageThreshold`) |
+
+### E2E 테스트 (Playwright)
+- `e2e/smoke.spec.ts` — 홈 페이지 로딩, 사이드바 네비게이션, 검색 기능 스모크 테스트
+- CI에서 build-and-test 완료 후 실행 (prod 빌드 기반)
+
+## CI/CD 및 배포 전략
+
+```
+push → main:
+  1. lint (ESLint)
+  2. type-check (tsc --noEmit)
+  3. test:coverage (커버리지 90% 미달 시 실패)
+  4. build (Next.js 프로덕션 빌드)
+  5. E2E (Playwright chromium, build 재실행)
+  6. deploy → Vercel (main push + 모든 CI 통과 시)
+```
+
+**롤백 전략**: Vercel 배포 실패 시 Dashboard → Deployments에서 이전 빌드 Promote to Production으로 즉시 롤백 가능 (다운타임 없음). CI 실패 시 main push 자체가 차단되어 broken build는 프로덕션에 도달하지 않음.
+
+## Notion API 마이그레이션 가이드
+
+현재 `loadPageChunk` 비공식 API → 공식 Notion API 전환 시 2개 파일만 교체:
+
+### 1. `src/lib/notion-structure.ts` 교체
+```typescript
+// 기존: POST https://www.notion.so/api/v3/loadPageChunk
+// 변경: GET https://api.notion.com/v1/blocks/{blockId}/children
+//       Authorization: Bearer {NOTION_TOKEN}
+```
+
+### 2. `src/app/api/notion/[pageId]/route.ts` 교체
+```typescript
+// 기존: loadPageChunk → 내부 블록 포맷 → 직접 변환
+// 변경: fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
+//         headers: { Authorization: `Bearer ${process.env.NOTION_TOKEN}` }
+//       })
+//       → 공식 API 응답은 이미 NotionModal이 기대하는 형식과 동일
+```
+
+**마이그레이션 이후**: `NOTION_TOKEN` 환경 변수 추가, Notion integration에서 대상 페이지 공유 설정 필요. 나머지 컴포넌트(NotionModal, CategoryCard 등)는 수정 불필요.
 
 ## 폴더 구조
 

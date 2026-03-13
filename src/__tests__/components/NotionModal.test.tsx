@@ -714,4 +714,96 @@ describe("NotionModal", () => {
       ).toBeInTheDocument();
     });
   });
+
+  it("child_page 블록 클릭 시 서브페이지로 이동하고 뒤로가기 버튼이 나타난다", async () => {
+    const subPageUrl = "https://www.notion.so/87e1f915cdf083ca827e812ef3a5a3e1";
+    // 첫 번째 fetch: child_page 블록 반환
+    mockFetchSuccess([
+      {
+        id: "block-child",
+        type: "child_page",
+        child_page: {
+          url: subPageUrl,
+          rich_text: [
+            {
+              plain_text: "서브페이지 제목",
+              href: null,
+              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false },
+            },
+          ],
+        },
+      },
+    ]);
+    // 두 번째 fetch: 서브페이지 블록 반환
+    mockFetchSuccess([
+      {
+        id: "block-para",
+        type: "paragraph",
+        paragraph: {
+          rich_text: [
+            {
+              plain_text: "서브페이지 내용",
+              href: null,
+              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false },
+            },
+          ],
+        },
+      },
+    ]);
+
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+
+    // child_page 버튼이 렌더링될 때까지 대기
+    await waitFor(() => {
+      expect(screen.getByText("서브페이지 제목")).toBeInTheDocument();
+    });
+
+    // 클릭하면 서브페이지로 이동한다
+    fireEvent.click(screen.getByText("서브페이지 제목"));
+
+    // 서브페이지 제목이 헤더에 표시되고 뒤로가기 버튼이 나타난다
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "이전 페이지" })).toBeInTheDocument();
+    });
+  });
+
+  it("뒤로가기 버튼 클릭 시 이전 페이지로 돌아간다", async () => {
+    const subPageUrl = "https://www.notion.so/87e1f915cdf083ca827e812ef3a5a3e1";
+    mockFetchSuccess([
+      {
+        id: "block-child",
+        type: "child_page",
+        child_page: {
+          url: subPageUrl,
+          rich_text: [
+            {
+              plain_text: "서브페이지 제목",
+              href: null,
+              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false },
+            },
+          ],
+        },
+      },
+    ]);
+    mockFetchSuccess([]);
+
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("서브페이지 제목")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("서브페이지 제목"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "이전 페이지" })).toBeInTheDocument();
+    });
+
+    // 뒤로가기 클릭 시 이전 페이지 제목으로 복귀한다
+    fireEvent.click(screen.getByRole("button", { name: "이전 페이지" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "이전 페이지" })).not.toBeInTheDocument();
+    });
+  });
 });

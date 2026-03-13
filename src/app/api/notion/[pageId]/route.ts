@@ -211,7 +211,12 @@ export async function GET(
       })
       .filter(Boolean);
 
-    return NextResponse.json({ blocks });
+    // 브라우저 및 CDN에서 5분 캐싱, stale-while-revalidate 60초
+    return NextResponse.json({ blocks }, {
+      headers: {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "알 수 없는 오류";
     return NextResponse.json(

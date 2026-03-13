@@ -36,13 +36,13 @@
   - 현재 날씨 & 미세먼지 (Open-Meteo API, 위치 기반)
   - 환율 (Frankfurter API, 1 USD 기준 4개 통화)
   - 국내 증시 (KOSPI · KOSDAQ, Yahoo Finance 프록시)
-  - 메모 (localStorage 영속화, 최대 20개)
+  - 메모 (Zustand persist 영속화, 최대 20개)
   - 미니 캘린더 + 공휴일 (date.nager.at API)
-  - D-Day 카운터 (localStorage 영속화, 날짜 오름차순 정렬)
-  - 북마크 (localStorage 영속화, 자동 https:// 추가)
+  - D-Day 카운터 (Zustand persist 영속화, 날짜 오름차순 정렬)
+  - 북마크 (Zustand persist 영속화, 자동 https:// 추가)
   - 포모도로 타이머 (집중 25분 / 휴식 5분, 자동 모드 전환)
   - 주간 날씨 예보 (Open-Meteo 7일 예보, 위치 기반)
-- **드래그앤드롭 위젯 재정렬** — HTML5 DnD (마우스) + Pointer Events API (터치), localStorage 순서 저장
+- **드래그앤드롭 위젯 재정렬** — HTML5 DnD (마우스) + Pointer Events API (터치), Zustand persist로 순서 저장
 - **균일 카드 레이아웃** — CSS Grid `auto-rows-[300px]`로 모든 카드 높이 고정, 내용 오버플로 시 스크롤
 - **다크모드** — `next-themes` 기반 라이트 / 다크 토글
 - **Notion API 무인증 접근** — 공개 페이지에 인증 없이 접근하는 `loadPageChunk` API 사용
@@ -56,7 +56,8 @@
 | Tailwind CSS | v4 | 빠른 UI 구현, 다크모드, `auto-rows-[300px]` 그리드 레이아웃 |
 | next-themes | 최신 | SSR-safe 다크모드 전환 |
 | lucide-react | 최신 | 일관된 아이콘 셋 |
-| Jest + React Testing Library | 최신 | 212개 테스트, 커버리지 90%+ 강제 |
+| Zustand | 최신 | 위젯 순서·메모·D-Day·북마크 상태 persist (localStorage 자동 영속화, SSR-safe) |
+| Jest + React Testing Library | 최신 | 250개 테스트, 커버리지 99%+, 90% 강제 |
 | Playwright | 최신 | E2E 스모크 테스트 (홈 로딩, 내비게이션, 검색) |
 
 ### 외부 API (인증 불필요)
@@ -81,7 +82,7 @@ npm run dev        # http://localhost:3000
 ```bash
 npm run dev            # 개발 서버 실행
 npm run build          # 프로덕션 빌드
-npm test               # 테스트 실행 (212개)
+npm test               # 테스트 실행 (250개)
 npm run test:coverage  # 커버리지 리포트 (90% 이상 유지)
 npm run test:e2e       # E2E 스모크 테스트 (Playwright)
 npm run lint           # ESLint 검사
@@ -108,6 +109,13 @@ src/
 │   └── Sidebar.tsx                    # 홈 + 섹션 네비게이션
 ├── data/
 │   └── knowledge-base.ts             # 타입 정의 + 정적 폴백 데이터 + 검색 유틸
+├── stores/
+│   ├── widgetStore.ts                 # Zustand persist — 위젯 순서 (DnD)
+│   ├── memoStore.ts                   # Zustand persist — 메모 목록 (최대 20개)
+│   ├── ddayStore.ts                   # Zustand persist — D-Day 목록 (날짜 오름차순)
+│   └── bookmarkStore.ts               # Zustand persist — 북마크 목록
+├── hooks/
+│   └── usePomodoro.ts                 # 포모도로 타이머 커스텀 훅
 └── lib/
     ├── notion-structure.ts            # Notion 계층 구조 동적 파싱 (서버 전용)
     ├── view-tracker.ts                # localStorage 열람 수 추적 (클라이언트 전용)
@@ -146,16 +154,26 @@ CD 설정: GitHub 저장소 Secrets에 `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_
 ## 테스트
 
 ```bash
-npm test                  # 전체 테스트 (212개)
+npm test                  # 전체 테스트 (250개)
 npm run test:coverage     # 커버리지 (전역 90% 이상 강제)
 ```
 
 | 지표 | 수치 |
 |------|------|
-| 테스트 수 | 212개 |
-| 구문 커버리지 | 98.1% |
-| 브랜치 커버리지 | 95.3% |
-| 함수 커버리지 | 97.4% |
-| 라인 커버리지 | 99.2% |
+| 테스트 수 | 250개 |
+| 구문 커버리지 | 99.1% |
+| 브랜치 커버리지 | 95.9% |
+| 함수 커버리지 | 100% |
+| 라인 커버리지 | 99.8% |
 
 커버리지 기준 미달 시 CI가 실패합니다 (`jest.config.ts` 참고).
+
+### 테스트 전략
+
+| 대상 | 전략 |
+|------|------|
+| Zustand 스토어 | `store.getState()` 직접 호출로 상태·액션 검증 |
+| 커스텀 훅 | `renderHook` + `act` + fake timer |
+| 위젯 컴포넌트 | `store.setState()`로 초기 데이터 주입 후 DOM 검증 |
+| API Route | `fetch` 모킹 후 응답 형식·에러 분기 검증 |
+| E2E (Playwright) | 홈 로딩, 사이드바 내비게이션, 검색 스모크 테스트 |
