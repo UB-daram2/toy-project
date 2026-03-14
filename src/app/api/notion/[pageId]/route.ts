@@ -5,6 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { CACHE, errorBody, HTTP_STATUS } from "@/lib/api-response";
 
 /** 32자리 ID를 UUID 형식으로 변환 (하이픈 삽입) */
 function formatPageId(pageId: string): string {
@@ -203,8 +204,8 @@ export async function GET(
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: `Notion API 오류: ${response.status}` },
-        { status: response.status }
+        errorBody(`Notion API 오류: ${response.status}`),
+        { status: HTTP_STATUS.BAD_GATEWAY }
       );
     }
 
@@ -258,17 +259,15 @@ export async function GET(
       });
     }
 
-    // 브라우저 및 CDN에서 5분 캐싱, stale-while-revalidate 60초
+    // Notion 페이지 콘텐츠는 느리게 변하므로 MEDIUM 캐시 프리셋 사용
     return NextResponse.json({ blocks }, {
-      headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
-      },
+      headers: { "Cache-Control": CACHE.MEDIUM },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "알 수 없는 오류";
     return NextResponse.json(
-      { error: `페이지를 불러오지 못했습니다: ${message}` },
-      { status: 500 }
+      errorBody(`페이지를 불러오지 못했습니다: ${message}`),
+      { status: HTTP_STATUS.INTERNAL_SERVER_ERROR }
     );
   }
 }

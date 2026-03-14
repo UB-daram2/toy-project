@@ -6,9 +6,10 @@
  * 인증 불필요. 브라우저 위치 정보 사용 → 실패 시 서울 기본값.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Cloud, Wind, Droplets, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useFetchWidget } from "@/hooks/useFetchWidget";
 import { WidgetCard } from "./WidgetCard";
 
 /** WMO 날씨 코드 → 한국어 레이블 + 이모지 */
@@ -85,32 +86,38 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
 }
 
 export function WeatherWidget() {
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
+  // 지오로케이션 결과를 ref에 저장 — 서울 기본값으로 초기화
+  // ref를 사용하여 fetcher를 안정적으로 유지하면서 좌표만 교체한다
+  const coordsRef = useRef({ lat: 37.5665, lon: 126.978, name: "서울" });
 
-  const load = (lat: number, lon: number, name: string) =>
-    fetchWeather(lat, lon)
-      .then((d) => setWeather({ ...d, locationName: name }))
-      .catch(() => setError(true))
-      .finally(() => setIsLoading(false));
+  // fetcher는 항상 coordsRef를 읽으므로 재생성 없이 최신 좌표를 사용한다
+  const fetcher = useCallback(
+    () => fetchWeather(coordsRef.current.lat, coordsRef.current.lon)
+      .then((d) => ({ ...d, locationName: coordsRef.current.name })),
+    []
+  );
+
+  const { data: weather, isLoading, error, retry } = useFetchWidget<WeatherData>(fetcher);
 
   useEffect(() => {
-    // 브라우저 위치 정보 요청 → 실패 시 서울 기본값
+    // 브라우저 위치 정보 요청 → 성공 시 실제 좌표로 재조회
+    // 실패 시: 마운트에서 서울 기본값으로 이미 조회됨 → 추가 액션 불필요
     if (typeof navigator !== "undefined" && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => load(pos.coords.latitude, pos.coords.longitude, "현재 위치"),
-        () => load(37.5665, 126.978, "서울")
-      );
-    } else {
-      load(37.5665, 126.978, "서울");
+      navigator.geolocation.getCurrentPosition((pos) => {
+        coordsRef.current = {
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          name: "현재 위치",
+        };
+        retry();
+      });
     }
-  }, []);
+  }, [retry]);
 
-  const refresh = () => {
-    setIsLoading(true);
-    setError(false);
-    load(37.5665, 126.978, "서울");
+  // 에러 시 재시도는 서울 기본값으로 리셋
+  const handleRetry = () => {
+    coordsRef.current = { lat: 37.5665, lon: 126.978, name: "서울" };
+    retry();
   };
 
   return (
@@ -128,7 +135,7 @@ export function WeatherWidget() {
         <div className="text-center">
           <p className="text-xs text-gray-400">날씨 정보를 불러올 수 없습니다</p>
           <button
-            onClick={refresh}
+            onClick={handleRetry}
             className="mt-2 text-xs text-emerald-500 hover:underline"
           >
             다시 시도

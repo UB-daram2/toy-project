@@ -99,8 +99,8 @@
 | next-themes | 최신 | SSR-safe 다크모드 전환 |
 | lucide-react | 최신 | 일관된 아이콘 셋 |
 | Zustand | 최신 | 위젯 순서·메모·D-Day·북마크·투두 상태 persist (localStorage 자동 영속화, SSR-safe) |
-| Jest + React Testing Library | 최신 | 315개 테스트 (API Route 포함), 브랜치 커버리지 92%+, 90% 강제 |
-| Playwright | 최신 | E2E 테스트 3종: smoke(홈·내비·검색) · widgets(위젯 상호작용 14개) · section(모달 흐름 4개) |
+| Jest + React Testing Library | 최신 | 322개 테스트 (API Route 포함), 브랜치 커버리지 92%+, 90% 강제 |
+| Playwright | 최신 | E2E 4종: smoke(3) · widgets(14) · section(4) · viewport(반응형 9개) |
 
 ### 외부 API 의존성 및 안정성 평가
 
@@ -113,6 +113,15 @@
 | date.nager.at | 한국 공휴일 | 불필요 | 무료 | 공휴일 표시 누락 (캘린더 기능 유지) | `fetch` 실패 시 빈 배열 반환, 캘린더 네비게이션은 정상 동작 |
 
 **마이그레이션 유연성**: Notion `loadPageChunk`와 Yahoo Finance는 인증 없이 접근하는 공개 엔드포인트로, 응답 형식이 변경될 경우 각각 `notion-structure.ts` + `api/notion/[pageId]/route.ts`, `api/market/route.ts` 단일 파일 교체만으로 다른 API로 전환 가능하다. 마이그레이션 경로는 CLAUDE.md에 상세 문서화했다.
+
+### 보안 리스크 및 대응 전략
+
+| 리스크 | 영향 | 현재 대응 | 추가 대응 방안 |
+|--------|------|-----------|---------------|
+| Notion `loadPageChunk` 스펙 변경 | 포털 전체 콘텐츠 미표시 | 정적 폴백(`knowledge-base.ts`)으로 기본 탐색 유지 | 공식 API 전환 (2파일 교체, CLAUDE.md 참고) |
+| Notion 비공개 API rate-limit | 다수 동시 접속 시 429 응답 | Vercel Edge Cache 5분(`s-maxage=300`)으로 중복 요청 차단 | Redis 캐시 레이어 추가 |
+| Yahoo Finance IP 차단 | 증시 위젯 에러 | 서버 프록시로 클라이언트 IP 숨김, 60초 캐시로 요청 빈도 감소 | Alpha Vantage 등 공식 API로 교체 (`/api/market` 1파일) |
+| 공개 페이지 데이터 스크래핑 | Notion 콘텐츠 무단 수집 가능 | 읽기 전용 레이어 특성상 쓰기 권한 없음 — 민감 정보는 Notion에 저장하지 않도록 운영 정책 수립 필요 | Notion integration으로 전환 시 페이지 접근 범위 제한 가능 |
 
 ## 개인화 기능 가이드 (Zustand persist)
 
@@ -130,6 +139,20 @@
 
 **기기 이전**: 현재 localStorage 기반이므로 기기 간 동기화는 지원하지 않는다. 향후 공식 Notion API 전환 시 서버사이드 저장으로 확장 가능하다.
 
+## 빠른 시작 체크리스트 (5분)
+
+다음 순서로 핵심 기능을 직접 확인하세요.
+
+- [ ] `npm install && npm run dev` 후 http://localhost:3000 접속 → 대시보드 로딩 확인
+- [ ] 검색창에 키워드(예: "처방") 입력 → 실시간 필터링 0ms 딜레이 확인
+- [ ] 카드 클릭 → Notion 문서가 탭 이동 없이 **모달**로 열리는지 확인
+- [ ] 위젯 좌측 상단 **⠿ 핸들** 드래그로 순서 변경 후 새로고침 → 순서 복원(persist) 확인
+- [ ] 메모·투두·D-Day 위젯에 데이터 입력 후 새로고침 → localStorage 유지 확인
+- [ ] 우측 상단 다크모드 토글 확인
+- [ ] 브라우저를 375px 뷰포트로 전환 → 하단 플로팅 네비게이션 표시 확인
+
+> Notion 섹션이 비어있으면 `src/data/knowledge-base.ts`의 정적 폴백 데이터가 표시됩니다.
+
 ## 시작하기
 
 ```bash
@@ -142,9 +165,9 @@ npm run dev        # http://localhost:3000
 ```bash
 npm run dev            # 개발 서버 실행
 npm run build          # 프로덕션 빌드
-npm test               # 테스트 실행 (315개)
+npm test               # 테스트 실행 (322개)
 npm run test:coverage  # 커버리지 리포트 (90% 이상 유지)
-npm run test:e2e       # E2E 스모크 테스트 (Playwright)
+npm run test:e2e       # E2E 테스트 (Playwright, smoke·widgets·section·viewport)
 npm run lint           # ESLint 검사
 npx tsc --noEmit       # 타입 검사
 ```

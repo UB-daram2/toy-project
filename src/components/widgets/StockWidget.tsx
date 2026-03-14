@@ -4,12 +4,13 @@
  * 국내 증시 위젯
  * /api/market (Yahoo Finance 서버 프록시)를 통해 KOSPI·KOSDAQ 지수를 가져온다.
  * 서버 프록시를 사용하여 클라이언트 IP 노출 및 CORS 문제를 차단한다.
+ * useFetchWidget 훅으로 isLoading·error·data 공통 상태를 관리한다.
  */
 
-import { useEffect, useState } from "react";
 import { BarChart2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WidgetCard } from "./WidgetCard";
+import { useFetchWidget } from "@/hooks/useFetchWidget";
 
 /** 증시 지수 데이터 타입 */
 interface StockIndex {
@@ -20,24 +21,16 @@ interface StockIndex {
   changePercent: number;
 }
 
+/** Next.js API Route를 통해 Yahoo Finance 비공식 API를 호출 (KOSPI·KOSDAQ) */
+async function fetchMarket(): Promise<StockIndex[]> {
+  const res = await fetch("/api/market");
+  const data = await res.json() as { indices: StockIndex[] };
+  return data.indices;
+}
+
 export function StockWidget() {
-  const [indices, setIndices] = useState<StockIndex[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  const load = () => {
-    setIsLoading(true);
-    setError(false);
-    // Next.js API Route를 통해 Yahoo Finance 비공식 API를 서버사이드에서 호출 (CORS 우회)
-    fetch("/api/market")
-      .then((r) => r.json())
-      .then((data) => setIndices(data.indices as StockIndex[]))
-      .catch(() => setError(true))
-      .finally(() => setIsLoading(false));
-  };
-
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, []);
+  // useFetchWidget으로 isLoading·error·data 3종 상태를 공통 패턴으로 관리
+  const { data: indices, isLoading, error, retry } = useFetchWidget<StockIndex[]>(fetchMarket);
 
   return (
     <WidgetCard
@@ -53,15 +46,15 @@ export function StockWidget() {
       {error && (
         <div className="text-center">
           <p className="text-xs text-gray-400">증시 정보를 불러올 수 없습니다</p>
-          <button onClick={load} className="mt-2 text-xs text-indigo-500 hover:underline">
+          <button onClick={retry} className="mt-2 text-xs text-indigo-500 hover:underline">
             다시 시도
           </button>
         </div>
       )}
-      {!isLoading && !error && indices.length === 0 && (
+      {!isLoading && !error && (!indices || indices.length === 0) && (
         <p className="text-center text-xs text-gray-400">데이터가 없습니다</p>
       )}
-      {!isLoading && !error && indices.length > 0 && (
+      {!isLoading && !error && indices && indices.length > 0 && (
         <div className="flex flex-col gap-3">
           {indices.map((idx) => {
             const isUp = idx.change >= 0;

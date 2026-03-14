@@ -324,10 +324,10 @@ describe("Notion Route — rich_text 장식 변환", () => {
 });
 
 describe("Notion Route — 에러 처리", () => {
-  it("Notion API non-OK 응답 시 동일 status로 응답한다", async () => {
+  it("Notion API non-OK 응답 시 502와 에러 메시지를 반환한다", async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
     const res = await GET(new Request("http://localhost"), makeParams(RAW_ID));
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(502);
     const body = await res.json();
     expect(body.error).toContain("Notion API 오류");
   });

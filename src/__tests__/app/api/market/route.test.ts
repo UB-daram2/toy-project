@@ -121,7 +121,7 @@ describe("Market Route — 에러 처리", () => {
     expect(body.indices[0].symbol).toBe("^KQ11");
   });
 
-  it("모든 fetch 실패 시 빈 배열을 반환한다", async () => {
+  it("모든 fetch 실패 시 502와 에러 메시지를 반환한다", async () => {
     mockFetch
       .mockResolvedValueOnce({ ok: false })
       .mockResolvedValueOnce({ ok: false });
@@ -129,8 +129,8 @@ describe("Market Route — 에러 처리", () => {
     const res = await GET();
     const body = await res.json();
 
-    expect(res.status).toBe(200);
-    expect(body.indices).toHaveLength(0);
+    expect(res.status).toBe(502);
+    expect(body.error).toBeDefined();
   });
 
   it("fetch 예외 발생 시 해당 지수를 건너뛴다", async () => {
@@ -159,7 +159,7 @@ describe("Market Route — 에러 처리", () => {
     expect(body.indices).toHaveLength(1);
   });
 
-  it("meta가 없으면 해당 지수를 건너뛴다", async () => {
+  it("meta가 없고 다른 지수도 실패하면 502를 반환한다", async () => {
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
@@ -170,7 +170,8 @@ describe("Market Route — 에러 처리", () => {
     const res = await GET();
     const body = await res.json();
 
-    expect(body.indices).toHaveLength(0);
+    expect(res.status).toBe(502);
+    expect(body.error).toBeDefined();
   });
 });
 

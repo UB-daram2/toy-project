@@ -1210,35 +1210,27 @@ describe("HomeView — 드래그앤드롭", () => {
   });
 
   it("geolocation 오류 시 서울 기본값으로 날씨를 로드한다", async () => {
-    // getCurrentPosition이 에러 콜백을 호출하도록 모킹한다
+    // 새 구현: error 콜백 없이 success 콜백을 호출하지 않는 것이 거부 시뮬레이션
+    // (마운트 시 coordsRef 서울 기본값으로 즉시 fetch → geolocation 거부 시 retry 없이 서울 유지)
     const mockGeolocation = {
-      getCurrentPosition: jest.fn((_success, error) => { error(new Error("denied")); }),
+      getCurrentPosition: jest.fn(), // 아무 콜백도 호출하지 않음 (거부/타임아웃)
     };
     Object.defineProperty(global.navigator, "geolocation", {
       value: mockGeolocation, configurable: true,
     });
-    mockFetch.mockReset();
-    // URL 기반 분기으로 위젯 렌더 순서 변경에 영향받지 않는다
-    mockFetch.mockImplementation((url: string) => {
-      if (String(url).includes("air-quality-api.open-meteo.com"))
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockAirGood) });
-      if (String(url).includes("daily="))
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeeklyWeatherResponse) });
-      if (String(url).includes("open-meteo.com"))
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockWeatherResponse) });
-      if (String(url).includes("frankfurter"))
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockExchangeRateResponse) });
-      if (String(url).includes("/api/market"))
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockMarketResponse) });
-      if (String(url).includes("date.nager.at"))
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHolidayResponse) });
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    });
     render(<HomeView sections={sampleSections} />);
     await waitFor(() => {
+      // 서울 기본값으로 마운트 시 즉시 fetch가 호출됐음을 검증
       expect(mockFetch).toHaveBeenCalled();
     });
-    // 정리: geolocation 모킹 제거
+    // 정리: geolocation 모킹 제거 (try-finally 없이도 afterEach에서 보장)
+    Object.defineProperty(global.navigator, "geolocation", {
+      value: undefined, configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    // geolocation 모킹이 다른 테스트로 누출되지 않도록 방어적으로 제거
     Object.defineProperty(global.navigator, "geolocation", {
       value: undefined, configurable: true,
     });

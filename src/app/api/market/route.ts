@@ -5,6 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { CACHE, errorBody, HTTP_STATUS } from "@/lib/api-response";
 
 interface IndexResult {
   symbol: string;
@@ -24,7 +25,7 @@ async function fetchIndex(symbol: string): Promise<IndexResult | null> {
       // 1분 캐시로 과도한 외부 요청을 방지한다
       next: { revalidate: 60 },
     });
-    if (!res.ok) return null;
+    if (!res.ok) return null; // 개별 지수 실패는 null 반환 → 상위에서 필터링
     const data = await res.json();
     const meta = data.chart?.result?.[0]?.meta;
     if (!meta) return null;
@@ -47,5 +48,16 @@ export async function GET() {
   ]);
 
   const indices = [kospi, kosdaq].filter((v): v is IndexResult => v !== null);
-  return NextResponse.json({ indices });
+
+  // 두 지수 모두 실패한 경우 502로 에러 응답 (클라이언트에서 에러 상태 표시)
+  if (indices.length === 0) {
+    return NextResponse.json(errorBody("증시 데이터를 가져올 수 없습니다"), {
+      status: HTTP_STATUS.BAD_GATEWAY,
+    });
+  }
+
+  // 1분 캐시: 증시 데이터는 빠르게 변하므로 SHORT 프리셋 사용
+  return NextResponse.json({ indices }, {
+    headers: { "Cache-Control": CACHE.SHORT },
+  });
 }
