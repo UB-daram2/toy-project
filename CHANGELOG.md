@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.0.0] — 2026-03-15
+
+### 배경 및 의사결정
+
+**1. 위젯 컴포넌트 분리 (관심사 분리 + 코드 탐색 용이성)**
+`HomeView.tsx`가 1,599줄까지 증가하면서 단일 파일로 유지하기 어려운 수준에 도달했다. 각 위젯을 `src/components/widgets/` 하위 개별 파일로 분리하여 관심사 분리를 완성하고, `HomeView.tsx`를 222줄(DnD 로직 + 그리드 렌더러)로 경량화했다. 배럴 파일(`index.ts`)에 위젯 14종 목록과 설명을 명시하여 코드베이스 전체 구조를 한눈에 파악할 수 있도록 했다.
+
+**2. CI/CD 자동화 고도화**
+프리뷰 배포 URL을 PR 코멘트로 자동 게시하여 검토자가 바로 확인할 수 있도록 개선했다. 프로덕션 배포 후 헬스체크(5회 재시도)를 추가하고, 실패 시 `vercel rollback`으로 자동 복원하여 다운타임을 최소화한다. `$GITHUB_STEP_SUMMARY`에 배포 결과를 기록하여 팀이 Actions 탭에서 즉시 참조할 수 있다.
+
+**3. E2E 테스트 대폭 확장**
+기존 스모크 테스트(`smoke.spec.ts`)에 위젯 상호작용 테스트(`widgets.spec.ts` 14개)와 모달 흐름 테스트(`section.spec.ts` 4개)를 추가했다. 이로써 UI 회귀와 사용자 시나리오를 자동으로 검증하는 안전망을 강화했다.
+
+**4. AI 에이전트 사용 환경 명시화**
+`.claude/settings.json`을 추가하여 프로젝트 루트에 `.claude/` 디렉토리를 구성했다. 허용 명령어(npm·npx·git)를 정의하여 AI 에이전트가 안전하게 사용할 수 있는 범위를 제한한다.
+
+### Added
+- **위젯 개별 파일 분리** (`src/components/widgets/`): WidgetCard + 14종 위젯 각각 독립 파일화, `index.ts` 배럴로 일괄 익스포트
+- **E2E `widgets.spec.ts`** (14개): 계산기 연산·초기화, 메모 추가·삭제, 투두 추가·완료·삭제, 포모도로 시작·일시정지·모드전환, 다크모드 토글, 드래그 핸들 DOM 존재 확인
+- **E2E `section.spec.ts`** (4개): 카드 링크 클릭 → NotionModal 열림, X 버튼·ESC 닫기, 외부 링크 href 검증
+- **`.claude/settings.json`**: AI 에이전트 허용 명령어(npm·npx·git) 정의
+- **CI/CD — PR 프리뷰 URL 자동 코멘트**: `actions/github-script@v7`로 Vercel 프리뷰 URL을 PR 코멘트에 자동 게시
+- **CI/CD — 헬스체크**: 프리뷰·프로덕션 배포 후 HTTP 200 확인 (5회 재시도 × 20초 간격)
+- **CI/CD — 자동 롤백**: 프로덕션 헬스체크 실패 시 `vercel rollback --yes` 자동 실행
+- **CI/CD — Job Summary**: `$GITHUB_STEP_SUMMARY`에 배포 URL·커밋 SHA·롤백 방법 기록
+
+### Changed
+- **`HomeView.tsx` 경량화**: 1,599줄 → 222줄 (DnD 핸들러 + 그리드 렌더러만 잔류, 위젯 코드는 `widgets/`로 이전)
+
+### Tests
+- 전체 테스트: 315개 (전 항목 통과)
+- 브랜치 커버리지: 92.07% (90% 임계값 유지)
+- E2E: smoke(3) + widgets(14) + section(4) = 총 21개 스펙
+
+---
+
 ## [0.10.0] — 2026-03-14
 
 ### 배경 및 의사결정
@@ -29,6 +65,12 @@
 
 ### Fixed
 - **다크모드 검색창 입력 텍스트 불가시** (`Header.tsx`): `dark:focus:bg-zinc-900` 추가 — 포커스 시 `focus:bg-white`가 다크모드 배경을 흰색으로 덮어쓰는 문제 수정
+
+### Tests
+- 전체 테스트: 315개 (전 항목 통과)
+- 브랜치 커버리지: 92.07% (90% 임계값 유지)
+- 라인 커버리지: 98.91%, 구문 커버리지: 97.61%
+- E2E: `e2e/widgets.spec.ts` 14개 (계산기·메모·투두·포모도로·다크모드·드래그핸들), `e2e/section.spec.ts` 4개 (모달 열림·X닫기·ESC닫기·외부링크) 신규 추가
 
 ---
 

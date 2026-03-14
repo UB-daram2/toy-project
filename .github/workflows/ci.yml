@@ -8,7 +8,7 @@ on:
 
 jobs:
   # ── 1단계: 정적 분석 + 단위/통합 테스트 + 빌드 ──────────────────────────────
-  # 코드 품질(lint·type), 로직 정확성(테스트 284개, 커버리지 90%+),
+  # 코드 품질(lint·type), 로직 정확성(테스트 315개, 커버리지 90%+),
   # 프로덕션 빌드 성공 여부를 순서대로 검증한다.
   # 이 job이 실패하면 E2E·배포 job은 실행되지 않는다.
   build-and-test:
@@ -107,11 +107,14 @@ jobs:
   # PR이 열릴 때마다 프로덕션과 분리된 Vercel 프리뷰 URL에 자동 배포한다.
   # 변경사항을 스테이징 환경에서 먼저 확인한 뒤 master에 머지하는 게이트 역할.
   # --prod 없이 실행하면 Vercel이 고유 프리뷰 URL을 생성한다 (프로덕션에 영향 없음).
+  # 배포 완료 후 URL을 PR 코멘트로 자동 게시하여 검토자가 바로 확인할 수 있다.
   deploy-preview:
     name: Deploy Preview (Staging)
     needs: [build-and-test, e2e]
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write   # PR 코멘트 게시에 필요
 
     steps:
       - name: Checkout repository
@@ -127,17 +130,63 @@ jobs:
         run: npm ci
 
       - name: Deploy to Vercel Preview
+        id: vercel-preview
         # --prod 없이 실행 → 프로덕션과 분리된 고유 프리뷰 URL 생성 (스테이징)
-        run: npx vercel --yes
+        # 출력에서 *.vercel.app URL을 추출하여 후속 단계에서 활용한다
+        run: |
+          DEPLOY_OUTPUT=$(npx vercel --yes 2>&1)
+          echo "$DEPLOY_OUTPUT"
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oE 'https://[a-zA-Z0-9_-]+\.vercel\.app' | tail -1)
+          echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
+      - name: Health check — preview URL
+        # 배포 전파 완료 후 HTTP 200을 확인하여 broken deploy를 조기에 감지한다
+        if: steps.vercel-preview.outputs.url != ''
+        run: |
+          URL="${{ steps.vercel-preview.outputs.url }}"
+          for i in $(seq 1 5); do
+            STATUS=$(curl -sLo /dev/null -w "%{http_code}" --max-time 10 "$URL" || echo "000")
+            if [ "$STATUS" = "200" ]; then echo "✅ Preview healthy: $URL"; exit 0; fi
+            echo "Attempt $i/5: HTTP $STATUS — waiting 20s..."
+            sleep 20
+          done
+          echo "⚠️ Preview health check failed after 5 attempts" && exit 1
+
+      - name: Comment PR with preview URL
+        # 검토자가 PR 페이지에서 바로 프리뷰 URL을 클릭할 수 있도록 코멘트를 게시한다
+        if: steps.vercel-preview.outputs.url != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.vercel-preview.outputs.url }}';
+            const sha = '${{ github.event.pull_request.head.sha }}'.substring(0, 7);
+            const branch = '${{ github.head_ref }}';
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: [
+                '## 🚀 Vercel 프리뷰 배포 완료',
+                '',
+                '| 항목 | 내용 |',
+                '|------|------|',
+                `| 프리뷰 URL | [${url}](${url}) |`,
+                `| 커밋 | \`${sha}\` |`,
+                `| 브랜치 | \`${branch}\` |`,
+                '',
+                '> PR 검토자: 위 URL에서 변경사항을 직접 확인하신 후 Approve 해주세요.',
+              ].join('\n'),
+            });
+
   # ── 4단계: Vercel 프로덕션 배포 ─────────────────────────────────────────────
   # master 브랜치 push + 1·2단계 모두 통과한 경우에만 실행된다.
   # PR은 3단계 스테이징 배포로 검증 후 머지 → 이 단계에서 프로덕션 반영.
-  # 배포 실패 시: Vercel Dashboard → Deployments → 이전 빌드 "Promote to Production"으로 롤백
+  # 배포 완료 후 헬스체크로 정상 서비스 확인, Job Summary에 결과와 롤백 방법을 기록한다.
+  # 롤백: Vercel Dashboard → Deployments → 이전 빌드 "Promote to Production"
   deploy:
     name: Deploy to Vercel
     needs: [build-and-test, e2e]
@@ -159,9 +208,54 @@ jobs:
         run: npm ci
 
       - name: Deploy to Vercel (production)
+        id: vercel-prod
         # VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID는 GitHub Secrets에 등록됨
-        run: npx vercel --prod --yes
+        # 출력에서 *.vercel.app URL을 추출하여 헬스체크 및 Job Summary에 활용한다
+        run: |
+          DEPLOY_OUTPUT=$(npx vercel --prod --yes 2>&1)
+          echo "$DEPLOY_OUTPUT"
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oE 'https://[a-zA-Z0-9_-]+\.vercel\.app' | tail -1)
+          echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Health check — production URL
+        id: prod-health
+        # 프로덕션 배포 직후 HTTP 200 응답을 확인하여 배포 성공 여부를 검증한다
+        if: steps.vercel-prod.outputs.url != ''
+        run: |
+          URL="${{ steps.vercel-prod.outputs.url }}"
+          for i in $(seq 1 5); do
+            STATUS=$(curl -sLo /dev/null -w "%{http_code}" --max-time 10 "$URL" || echo "000")
+            if [ "$STATUS" = "200" ]; then echo "✅ Production healthy: $URL"; exit 0; fi
+            echo "Attempt $i/5: HTTP $STATUS — waiting 20s..."
+            sleep 20
+          done
+          echo "⚠️ Production health check failed after 5 attempts" && exit 1
+
+      - name: Auto-rollback on health check failure
+        # 헬스체크 실패 시 이전 배포로 자동 롤백하여 다운타임을 최소화한다
+        # vercel rollback은 직전 성공 배포를 프로덕션으로 즉시 복원한다
+        if: failure() && steps.prod-health.outcome == 'failure'
+        run: |
+          echo "⚠️ 헬스체크 실패 감지 — 이전 배포로 자동 롤백합니다..."
+          npx vercel rollback --yes
+          echo "✅ 롤백 완료: 이전 프로덕션 배포가 복원되었습니다"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Write deployment summary
+        # Job Summary에 배포 결과와 롤백 가이드를 기록하여 팀이 쉽게 참조할 수 있도록 한다
+        if: always()
+        run: |
+          echo "## 🚀 프로덕션 배포 결과" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 항목 | 내용 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| URL | [${{ steps.vercel-prod.outputs.url }}](${{ steps.vercel-prod.outputs.url }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 커밋 | \`${GITHUB_SHA:0:7}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 롤백 방법 | Vercel Dashboard → Deployments → 이전 빌드 **Promote to Production** |" >> "$GITHUB_STEP_SUMMARY"

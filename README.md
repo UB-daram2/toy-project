@@ -100,7 +100,7 @@
 | lucide-react | 최신 | 일관된 아이콘 셋 |
 | Zustand | 최신 | 위젯 순서·메모·D-Day·북마크·투두 상태 persist (localStorage 자동 영속화, SSR-safe) |
 | Jest + React Testing Library | 최신 | 315개 테스트 (API Route 포함), 브랜치 커버리지 92%+, 90% 강제 |
-| Playwright | 최신 | E2E 스모크 테스트 (홈 로딩, 내비게이션, 검색) |
+| Playwright | 최신 | E2E 테스트 3종: smoke(홈·내비·검색) · widgets(위젯 상호작용 14개) · section(모달 흐름 4개) |
 
 ### 외부 API 의존성 및 안정성 평가
 
@@ -160,10 +160,27 @@ src/
 │   ├── layout.tsx
 │   └── page.tsx                       # Async Server Component — Notion에서 구조 로딩
 ├── components/
+│   ├── widgets/                       # 홈 위젯 14종 (각각 독립 파일)
+│   │   ├── index.ts                   #   배럴 익스포트
+│   │   ├── WidgetCard.tsx             #   공유 카드 래퍼 (그라데이션 헤더 + 스크롤 영역)
+│   │   ├── WeatherWidget.tsx          #   현재 날씨 + 미세먼지 (Open-Meteo)
+│   │   ├── WeeklyWeatherWidget.tsx    #   주간 예보 7일
+│   │   ├── ExchangeRateWidget.tsx     #   환율 (Frankfurter)
+│   │   ├── StockWidget.tsx            #   KOSPI·KOSDAQ (/api/market)
+│   │   ├── CalendarWidget.tsx         #   미니 캘린더 + 공휴일
+│   │   ├── MemoWidget.tsx             #   메모 (useMemoStore)
+│   │   ├── DDayWidget.tsx             #   D-Day 카운터 (useDDayStore)
+│   │   ├── BookmarkWidget.tsx         #   북마크 (useBookmarkStore)
+│   │   ├── PomodoroWidget.tsx         #   포모도로 타이머
+│   │   ├── TodoWidget.tsx             #   Todo (useTodoStore)
+│   │   ├── CalculatorWidget.tsx       #   계산기
+│   │   ├── ClockWidget.tsx            #   디지털 시계
+│   │   ├── RecentlyModifiedWidget.tsx #   최근 수정 Top 5
+│   │   └── MostViewedWidget.tsx       #   많이 본 게시물 Top 5
 │   ├── CategoryCard.tsx               # 카테고리 카드 (더 보기 / 모달 연동 / 열람 수 기록)
 │   ├── Dashboard.tsx                  # 상태 관리 루트 컴포넌트
 │   ├── Header.tsx                     # 검색 + 다크모드 토글
-│   ├── HomeView.tsx                   # 홈 위젯 14종 + 드래그앤드롭 재정렬
+│   ├── HomeView.tsx                   # 홈 위젯 그리드 + 드래그앤드롭 재정렬
 │   ├── NotionModal.tsx                # 블록 렌더러 + 페이지 내비게이션
 │   ├── SectionView.tsx                # 섹션 카드 그리드
 │   └── Sidebar.tsx                    # 홈 + 섹션 네비게이션
@@ -219,15 +236,18 @@ push / PR
 [2단계] e2e
   ├─ build        — E2E 전용 빌드 (프로덕션 환경과 동일 조건)
   ├─ playwright install chromium
-  └─ test:e2e     — 홈 로딩·사이드바 네비게이션·검색 스모크 테스트
+  └─ test:e2e     — smoke·widgets·section 3종 스펙 (홈·위젯·섹션 흐름)
   │               실패 시 playwright-report 아티팩트 7일 보관
   │
   ├─▶ (PR 이벤트) [3단계] deploy-preview
-  │     └─ vercel (--prod 없음) — 프리뷰 URL 생성 (스테이징 환경)
-  │        머지 전 실제 배포 환경에서 변경사항 확인 가능
+  │     ├─ vercel (--prod 없음) — 프리뷰 URL 생성 (스테이징)
+  │     ├─ health check — 프리뷰 URL HTTP 200 확인 (5회, 20s 간격)
+  │     └─ PR 코멘트 자동 게시 — 검토자가 프리뷰 URL 바로 확인
   │
   └─▶ (master push) [4단계] deploy
-        └─ vercel --prod — Vercel 프로덕션 배포
+        ├─ vercel --prod — Vercel 프로덕션 배포
+        ├─ health check — 프로덕션 URL HTTP 200 확인 (5회, 20s 간격)
+        └─ 헬스체크 실패 시 자동 롤백 (vercel rollback --yes)
 ```
 
 ### 파이프라인 설계 이유
@@ -240,7 +260,8 @@ push / PR
 | 상황 | 대응 |
 |------|------|
 | CI 실패 | master push 자체가 차단 — broken build는 프로덕션에 도달하지 않음 |
-| Vercel 배포 실패 | Dashboard → Deployments → 이전 빌드 "Promote to Production" → 다운타임 없이 즉시 롤백 |
+| 헬스체크 실패 (자동) | `vercel rollback --yes` 자동 실행 → 이전 프로덕션 즉시 복원 |
+| Vercel 배포 실패 (수동) | Dashboard → Deployments → 이전 빌드 "Promote to Production" → 다운타임 없이 즉시 롤백 |
 | 런타임 오류 발견 | 동일 방법으로 이전 배포로 즉시 롤백, 이후 수정 후 재배포 |
 
 CD 설정: GitHub 저장소 Secrets에 `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` 등록 완료.
@@ -270,4 +291,4 @@ npm run test:coverage     # 커버리지 (전역 90% 이상 강제)
 | 커스텀 훅 | `renderHook` + `act` + fake timer | 비동기 상태 변화를 동기적으로 검증 |
 | 위젯 컴포넌트 | `store.setState()`로 초기 데이터 주입 후 DOM 검증 | 실제 localStorage 접근 없이 렌더링 결과 검증 |
 | API Route | `fetch` 모킹 후 응답 형식·에러 분기 검증 | `@jest-environment node`로 Node.js 환경 격리 |
-| E2E (Playwright) | 홈 로딩, 사이드바 내비게이션, 검색 스모크 테스트 | 실제 브라우저에서 사용자 흐름 전체 검증 |
+| E2E (Playwright) | smoke(홈·내비·검색) · widgets(위젯 상호작용 14개) · section(모달 흐름 4개) 3종 스펙 | 실제 브라우저에서 사용자 흐름 전체 검증 |
