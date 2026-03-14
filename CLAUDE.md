@@ -98,6 +98,7 @@ src/app/api/market/route.ts           ← Yahoo Finance 프록시 (CORS 우회, 
 src/lib/notion-structure.ts           ← Notion 3단계 계층 파싱 (서버 전용)
 src/lib/view-tracker.ts               ← localStorage 열람 수 추적 (클라이언트 전용)
 src/lib/utils.ts                      ← cn, 색상 클래스(gradient 포함), URL 파싱
+src/lib/api-response.ts               ← API Route 공통 CACHE 프리셋·HTTP_STATUS·errorBody 집중화
 src/data/knowledge-base.ts            ← 타입 정의 + 정적 폴백 데이터 + 검색 유틸
 src/stores/widgetStore.ts             ← Zustand persist 스토어 (위젯 순서 상태)
 src/stores/memoStore.ts               ← Zustand persist 스토어 (메모 목록, 최대 20개)
@@ -221,22 +222,27 @@ const { data, isLoading, error, retry } = useFetchWidget<T>(
 // UI: isLoading → 스피너, error → retry 버튼, data → 정상 렌더링
 ```
 
-**지오로케이션 위젯 (WeatherWidget, WeeklyWeatherWidget)**: geolocation 콜백 내 동적 좌표로 fetcher를 호출하므로 직접 isLoading/error 상태를 관리한다.
+**지오로케이션 위젯 (WeatherWidget, WeeklyWeatherWidget)**: `coordsRef`에 서울 기본 좌표를 저장하여 마운트 시 즉시 fetch하고, geolocation 성공 시 `retry()`로 재조회한다.
 
 ```typescript
-// 지오로케이션 패턴 — useFetchWidget 적용 불가 (동적 파라미터)
-const [data, setData] = useState<T | null>(null);
-const [isLoading, setIsLoading] = useState(true);
-const [error, setError] = useState(false);
+// coordsRef 패턴 — useFetchWidget + geolocation 통합
+const coordsRef = useRef({ lat: 37.5665, lon: 126.978, name: "서울" });
+
+const fetcher = useCallback(
+  () => fetchApi(coordsRef.current.lat, coordsRef.current.lon),
+  []  // coordsRef는 안정적인 ref이므로 deps 불필요
+);
+
+const { data, isLoading, error, retry } = useFetchWidget(fetcher);
 
 useEffect(() => {
-  navigator.geolocation.getCurrentPosition(
-    (pos) => fetchApi(pos.coords.latitude, pos.coords.longitude)
-      .then(setData).catch(() => setError(true)).finally(() => setIsLoading(false)),
-    () => fetchApi(DEFAULT_LAT, DEFAULT_LON)
-      .then(setData).catch(() => setError(true)).finally(() => setIsLoading(false))
-  );
-}, []);
+  // 성공 시 실제 좌표로 업데이트 후 retry → 재조회
+  // 실패 시 마운트 시 서울 기본값 fetch가 이미 완료되어 있음
+  navigator.geolocation.getCurrentPosition((pos) => {
+    coordsRef.current = { lat: pos.coords.latitude, lon: pos.coords.longitude, name: "현재 위치" };
+    retry();
+  });
+}, [retry]);
 ```
 
 **eslint-disable-next-line react-hooks/set-state-in-effect 허용 기준**: `useEffect` 외부에서 정의된 `load` 함수 또는 `then` 콜백 내 `setState` 호출에 한해서만 허용. Zustand persist 스토어로 관리 가능한 영속 상태에는 절대 사용 금지.
@@ -246,7 +252,7 @@ useEffect(() => {
 ## 작성 규칙
 
 - 실제 동작하는 코드만 작성 (미구현 stub 금지)
-- 테스트 커버리지 90% 이상 유지 (전역 기준: 현재 99%+)
+- 테스트 커버리지 90% 이상 유지 (전역 기준: 현재 구문 97.3% / 브랜치 91.4% / 라인 98.4%)
 - 기능을 명확히 나타내는 이름 사용 (약어/모호한 이름 금지)
 - 로직 블록마다 반드시 주석 작성
 - **영속 상태는 반드시 Zustand persist 스토어로 관리** — `localStorage` 직접 접근 금지 (SSR 하이드레이션 불일치 유발)

@@ -99,7 +99,7 @@
 | next-themes | 최신 | SSR-safe 다크모드 전환 |
 | lucide-react | 최신 | 일관된 아이콘 셋 |
 | Zustand | 최신 | 위젯 순서·메모·D-Day·북마크·투두 상태 persist (localStorage 자동 영속화, SSR-safe) |
-| Jest + React Testing Library | 최신 | 322개 테스트 (API Route 포함), 브랜치 커버리지 92%+, 90% 강제 |
+| Jest + React Testing Library | 최신 | 333개 테스트 (API Route 포함), 브랜치 커버리지 92%+, 90% 강제 |
 | Playwright | 최신 | E2E 4종: smoke(3) · widgets(14) · section(4) · viewport(반응형 9개) |
 
 ### 외부 API 의존성 및 안정성 평가
@@ -165,7 +165,7 @@ npm run dev        # http://localhost:3000
 ```bash
 npm run dev            # 개발 서버 실행
 npm run build          # 프로덕션 빌드
-npm test               # 테스트 실행 (322개)
+npm test               # 테스트 실행 (333개)
 npm run test:coverage  # 커버리지 리포트 (90% 이상 유지)
 npm run test:e2e       # E2E 테스트 (Playwright, smoke·widgets·section·viewport)
 npm run lint           # ESLint 검사
@@ -252,14 +252,14 @@ push / PR
   ├─ npm audit    — 알려진 보안 취약점 검출 (high 이상 시 실패)
   ├─ ESLint       — 코드 품질 정적 분석
   ├─ tsc --noEmit — 런타임 전 타입 오류 검출
-  ├─ test:coverage — Jest 315개 + 커버리지 90% 미달 시 실패
+  ├─ test:coverage — Jest 333개 + 커버리지 90% 미달 시 실패
   └─ build        — Next.js 프로덕션 빌드 성공 여부 확인
   │
   ▼ (build-and-test 통과 시)
 [2단계] e2e
   ├─ build        — E2E 전용 빌드 (프로덕션 환경과 동일 조건)
   ├─ playwright install chromium
-  └─ test:e2e     — smoke·widgets·section 3종 스펙 (홈·위젯·섹션 흐름)
+  └─ test:e2e     — smoke·widgets·section·viewport 4종 스펙 (홈·위젯·섹션·반응형)
   │               실패 시 playwright-report 아티팩트 7일 보관
   │
   ├─▶ (PR 이벤트) [3단계] deploy-preview
@@ -292,17 +292,17 @@ CD 설정: GitHub 저장소 Secrets에 `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_
 ## 테스트
 
 ```bash
-npm test                  # 전체 테스트 (315개)
+npm test                  # 전체 테스트 (333개)
 npm run test:coverage     # 커버리지 (전역 90% 이상 강제)
 ```
 
 | 지표 | 수치 |
 |------|------|
-| 테스트 수 | 315개 (API Route 포함) |
-| 구문 커버리지 | 97.96% |
-| 브랜치 커버리지 | 92.07% |
-| 함수 커버리지 | 97.61% |
-| 라인 커버리지 | 98.91% |
+| 테스트 수 | 333개 (API Route 포함) |
+| 구문 커버리지 | 97.30% |
+| 브랜치 커버리지 | 91.36% |
+| 함수 커버리지 | 97.60% |
+| 라인 커버리지 | 98.37% |
 
 커버리지 기준 미달 시 CI가 실패합니다 (`jest.config.ts` 참고).
 
