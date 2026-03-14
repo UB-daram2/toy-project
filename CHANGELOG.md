@@ -8,7 +8,7 @@
 ### 배경 및 의사결정
 
 **1. useFetchWidget 훅 추출 (DRY 원칙)**
-`StockWidget`, `ExchangeRateWidget` 등 5개 외부 API 위젯에서 `isLoading / error / data / retry` 3+1종 상태를 개별적으로 반복 정의하고 있었다. `src/hooks/useFetchWidget.ts`로 공통 패턴을 추상화하여 DRY 원칙을 준수하고, 단순 fetch 위젯(StockWidget)에 우선 적용했다. 지오로케이션 위젯(WeatherWidget, WeeklyWeatherWidget)은 동적 좌표 파라미터로 인해 직접 상태 관리를 유지한다.
+`StockWidget`, `ExchangeRateWidget` 등 5개 외부 API 위젯에서 `isLoading / error / data / retry` 3+1종 상태를 개별적으로 반복 정의하고 있었다. `src/hooks/useFetchWidget.ts`로 공통 패턴을 추상화하여 DRY 원칙을 준수하고, StockWidget·WeatherWidget·WeeklyWeatherWidget에 적용했다. WeatherWidget·WeeklyWeatherWidget은 `coordsRef` 패턴(지오로케이션 좌표를 ref에 저장, 마운트 시 서울 기본값으로 즉시 fetch → 위치 확보 시 `retry()`로 재조회)으로 useFetchWidget과 통합했다.
 
 **2. 반응형 레이아웃 E2E 검증 추가**
 기존 E2E 테스트가 뷰포트 분기 없이 단일 해상도에서만 실행되었다. `e2e/viewport.spec.ts`를 추가하여 모바일(375px) 사이드바 숨김, 태블릿(768px)·데스크톱(1280px) 사이드바 표시를 Playwright로 실제 브라우저 렌더링 기준으로 검증한다. Tailwind `hidden md:flex` 분기가 실제로 동작하는지 회귀 방지 안전망을 갖추었다.
@@ -30,6 +30,8 @@
 
 ### Changed
 - **`StockWidget`**: useFetchWidget 훅 적용 (직접 useState 3개 + useEffect 패턴 → 훅 1줄)
+- **`WeatherWidget`**: useFetchWidget 훅 적용 (coordsRef 패턴으로 지오로케이션 좌표 통합)
+- **`WeeklyWeatherWidget`**: useFetchWidget 훅 적용 (coordsRef 패턴으로 지오로케이션 좌표 통합)
 - **`package.json`**: `@notionhq/client` 의존성 제거 (미사용 패키지)
 - **`src/app/api/market/route.ts`**: api-response.ts 통합, 두 지수 모두 실패 시 502 반환 (이전: 200 + 빈 배열)
 - **`src/app/api/notion/[pageId]/route.ts`**: api-response.ts 통합, non-OK 응답에 일관된 502 반환
