@@ -47,6 +47,7 @@ export function useIMEInput({ value, onChange }: UseIMEInputOptions): UseIMEInpu
   // 부모 value가 외부(지우기 버튼, 섹션 이동 후 복귀 등)에서 변경될 때 로컬값에 반영한다
   // 단, IME 조합 중에는 동기화하지 않아 조합 세션이 끊기는 것을 방지한다
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!isComposingRef.current) setLocalValue(value);
   }, [value]);
 

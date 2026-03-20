@@ -27,7 +27,6 @@ export function Header({ searchQuery, onSearchChange, totalDocuments }: HeaderPr
   // SSR 하이드레이션 불일치 방지: 마운트 후에만 테마 UI를 렌더링
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
   }, []);
 
