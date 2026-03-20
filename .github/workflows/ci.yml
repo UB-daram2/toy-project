@@ -58,13 +58,13 @@ jobs:
         # 단위 테스트 통과 후 실제 Next.js 빌드 성공 여부 최종 확인
         run: npm run build
 
-      - name: Upload build artifact
-        # E2E job에서 재빌드 없이 동일 산출물을 재사용하기 위해 .next/ 디렉토리를 공유한다
-        uses: actions/upload-artifact@v4
+      - name: Save build for E2E job
+        # upload-artifact는 .gitignore 패턴을 존중하여 .next/를 제외한다 → cache/save 사용
+        # run_id 키를 사용하면 동일 워크플로 실행 내에서만 공유된다 (잡 간 빌드 산출물 전달)
+        uses: actions/cache/save@v4
         with:
-          name: nextjs-build
           path: .next/
-          retention-days: 1
+          key: nextjs-build-${{ github.run_id }}
 
       - name: Analyze bundle size
         # 빌드 후 정적 청크 크기를 측정하여 성능 저하를 조기에 감지한다.
@@ -119,12 +119,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download build artifact
-        # build-and-test job에서 빌드한 .next/ 산출물을 재사용 — 재빌드 시간(~1분) 절약
-        uses: actions/download-artifact@v4
+      - name: Restore build from cache
+        # build-and-test job에서 저장한 .next/ 산출물을 복원 — 재빌드 시간(~1분) 절약
+        uses: actions/cache/restore@v4
         with:
-          name: nextjs-build
           path: .next/
+          key: nextjs-build-${{ github.run_id }}
+          fail-on-cache-miss: true
 
       - name: Cache Playwright browsers
         # package-lock.json 기반 캐시 — Playwright 버전이 바뀌지 않으면 브라우저 다운로드 스킵
