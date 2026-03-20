@@ -40,10 +40,10 @@ export function Sidebar({ sections, activeSectionId, onSectionSelect }: SidebarP
           </div>
           <div>
             <h1 className="text-sm font-bold leading-tight text-gray-900 dark:text-zinc-100">
-              유팜 지원 포털
+              유팜 기술지원 포털
             </h1>
             <p className="text-[10px] text-gray-400 dark:text-zinc-500">
-              고객 지원 지식베이스
+              기술 지원 지식베이스
             </p>
           </div>
         </div>
@@ -158,7 +158,7 @@ export function Sidebar({ sections, activeSectionId, onSectionSelect }: SidebarP
             유팜시스템
           </p>
           <p className="mt-0.5 text-[10px] text-indigo-400/70 dark:text-indigo-500/60">
-            고객 지원 포털 v1.0
+            기술 지원 포털 v1.0
           </p>
         </div>
       </div>

@@ -8,7 +8,7 @@ import { test, expect } from "@playwright/test";
 test.describe("스모크 테스트 — 앱 로딩", () => {
   test("홈 대시보드가 정상 로드된다", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /홈/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /유팜 기술지원 포털/ })).toBeVisible();
   });
 
   test("사이드바에 세 개의 섹션 버튼이 표시된다", async ({ page }) => {
@@ -46,7 +46,7 @@ test.describe("스모크 테스트 — 내비게이션", () => {
     // 섹션으로 이동 후 홈 버튼 클릭
     await page.getByRole("button", { name: /처리방법이 궁금해요/ }).click();
     await page.getByRole("button", { name: /홈/ }).click();
-    await expect(page.getByRole("heading", { name: /홈/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /유팜 기술지원 포털/ })).toBeVisible();
   });
 });
 

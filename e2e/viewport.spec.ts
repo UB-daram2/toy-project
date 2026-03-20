@@ -15,7 +15,7 @@ test.describe("반응형 — 모바일(375px)", () => {
 
   test("홈 대시보드가 정상 로드된다", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /홈/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /유팜 기술지원 포털/ })).toBeVisible();
   });
 
   test("검색 인풋이 표시된다", async ({ page }) => {
@@ -37,7 +37,7 @@ test.describe("반응형 — 태블릿(768px)", () => {
 
   test("홈 대시보드가 정상 로드된다", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /홈/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /유팜 기술지원 포털/ })).toBeVisible();
   });
 
   test("768px 이상에서 데스크톱 사이드바가 표시된다", async ({ page }) => {
@@ -59,7 +59,7 @@ test.describe("반응형 — 데스크톱(1280px)", () => {
 
   test("홈 대시보드가 정상 로드된다", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /홈/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /유팜 기술지원 포털/ })).toBeVisible();
   });
 
   test("데스크톱에서 사이드바가 표시된다", async ({ page }) => {

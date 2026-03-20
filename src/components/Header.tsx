@@ -60,10 +60,10 @@ export function Header({ searchQuery, onSearchChange, totalDocuments }: HeaderPr
       <div className="mb-3 flex items-center justify-between md:hidden">
         <div>
           <h1 className="text-base font-bold leading-tight text-gray-900 dark:text-zinc-100">
-            유팜 지원 포털
+            유팜 기술지원 포털
           </h1>
           <p className="text-[10px] text-gray-400 dark:text-zinc-500">
-            고객 지원 지식베이스
+            기술 지원 지식베이스
           </p>
         </div>
         {/* 모바일 테마 토글: aria-label을 "다크 모드 전환"으로 구분하여

@@ -25,10 +25,10 @@ beforeEach(() => {
 describe("Dashboard", () => {
   it("초기 렌더링 시 홈 뷰를 표시한다", () => {
     render(<Dashboard />);
-    // 초기 상태는 홈 뷰 — HomeView의 포털 제목 heading이 표시되어야 한다
+    // 초기 상태는 홈 뷰 — Sidebar(h1)·HomeView(h2) 모두 포털 제목을 포함한다
     expect(
-      screen.getByRole("heading", { name: /유팜 고객지원 포털/ })
-    ).toBeInTheDocument();
+      screen.getAllByRole("heading", { name: /유팜 기술지원 포털/ }).length
+    ).toBeGreaterThan(0);
   });
 
   it("사이드바에 홈 버튼과 세 개의 섹션 버튼이 모두 있다", () => {

@@ -185,7 +185,7 @@ export function HomeView({
     <div className="flex flex-col gap-6">
       {/* 히어로 섹션 — 홈 히어로 vs 기존 그라데이션 배너 */}
       {onSearchChange !== undefined ? (
-        /* ── 고객지원 포털 홈 히어로 ──
+        /* ── 기술지원 포털 홈 히어로 ──
            - 검색 중(isSearching): 컴팩트 모드 — 포털 제목·태그라인·섹션 버튼 숨김
            - 검색 미입력: 풀 모드 — 포털 타이틀·날짜·태그라인·섹션 바로가기 모두 표시 */
         <div className={cn(
@@ -215,7 +215,7 @@ export function HomeView({
           {!isSearching && (
             <div className="text-center">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-zinc-100 md:text-3xl">
-                유팜 고객지원 포털
+                유팜 기술지원 포털
               </h2>
               <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
                 처방 문의 · 사용법 · 파일 요청 — 빠르게 검색하세요

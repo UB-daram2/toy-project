@@ -14,8 +14,8 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "유팜 지원 포털",
-  description: "유팜시스템 고객 지원 지식베이스 대시보드",
+  title: "유팜 기술지원 포털",
+  description: "유팜시스템 기술 지원 지식베이스 대시보드",
 };
 
 export default function RootLayout({

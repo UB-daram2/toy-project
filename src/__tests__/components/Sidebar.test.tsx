@@ -87,7 +87,7 @@ describe("Sidebar", () => {
         onSectionSelect={jest.fn()}
       />
     );
-    expect(screen.getByText("유팜 지원 포털")).toBeInTheDocument();
+    expect(screen.getByText("유팜 기술지원 포털")).toBeInTheDocument();
   });
 
   it("빈 섹션 배열이면 홈 버튼만 렌더링한다", () => {
@@ -98,7 +98,7 @@ describe("Sidebar", () => {
         onSectionSelect={jest.fn()}
       />
     );
-    expect(screen.getByText("유팜 지원 포털")).toBeInTheDocument();
+    expect(screen.getByText("유팜 기술지원 포털")).toBeInTheDocument();
     // 섹션이 없어도 홈 버튼은 항상 표시된다
     expect(screen.getByRole("button", { name: /홈/ })).toBeInTheDocument();
   });
