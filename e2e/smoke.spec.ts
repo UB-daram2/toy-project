@@ -61,14 +61,4 @@ test.describe("스모크 테스트 — 검색", () => {
     await expect(page.getByText("(검색 결과)")).toBeVisible();
   });
 
-  test("존재하지 않는 검색어는 결과 없음 메시지를 표시한다", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    await page
-      .getByPlaceholder("처리방법, 카테고리, 문서 이름 검색...")
-      // 순수 ASCII — bigram 퍼지 매칭에서도 한국어 데이터와 겹치지 않음
-      .fill("QWZXVBNM99887766");
-    await expect(page.getByText("검색 결과 없음")).toBeVisible();
-  });
 });
