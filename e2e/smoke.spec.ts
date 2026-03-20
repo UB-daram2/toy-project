@@ -8,7 +8,8 @@ import { test, expect } from "@playwright/test";
 test.describe("스모크 테스트 — 앱 로딩", () => {
   test("홈 대시보드가 정상 로드된다", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /유팜 기술지원 포털/ })).toBeVisible();
+    // Sidebar h1 + HomeView h2 두 heading 모두 포털명을 포함 — first()로 하나만 검증
+    await expect(page.getByRole("heading", { name: /유팜 기술지원 포털/ }).first()).toBeVisible();
   });
 
   test("사이드바에 세 개의 섹션 버튼이 표시된다", async ({ page }) => {
@@ -46,7 +47,7 @@ test.describe("스모크 테스트 — 내비게이션", () => {
     // 섹션으로 이동 후 홈 버튼 클릭
     await page.getByRole("button", { name: /처리방법이 궁금해요/ }).click();
     await page.getByRole("button", { name: /홈/ }).click();
-    await expect(page.getByRole("heading", { name: /유팜 기술지원 포털/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /유팜 기술지원 포털/ }).first()).toBeVisible();
   });
 });
 
@@ -66,7 +67,8 @@ test.describe("스모크 테스트 — 검색", () => {
     await page.goto("/");
     await page
       .getByPlaceholder("처리방법, 카테고리, 문서 이름 검색...")
-      .fill("xyz_존재하지_않는_검색어_abc");
+      // 순수 ASCII — bigram 퍼지 매칭에서도 한국어 데이터와 겹치지 않음
+      .fill("QWZXVBNM99887766");
     await expect(page.getByText("검색 결과 없음")).toBeVisible();
   });
 });
