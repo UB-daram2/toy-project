@@ -1,5 +1,58 @@
 # Changelog
 
+## [1.0.2] — 2026-03-20
+
+> **개발 컨텍스트**: UI/UX 전면 재설계(고객지원팀 워크플로 중심) + 전체 리팩토링 + 한국어 IME 버그 수정.
+
+### 배경 및 의사결정
+
+**1. 한국어 IME 입력 버그 수정 (근본 원인 해결)**
+홈 히어로 검색창에서 한글을 입력하면 "처방" → "처창" / "처ㅇ" 으로 깨지는 문제가 있었다.
+근본 원인: `searchQuery` 갱신 → `isGoogleMode=false` → Google 히어로 언마운트/헤더 마운트로 **IME가 연결된 DOM 입력 요소 자체가 교체**되어 IME 세션이 끊겼다.
+해결: `isHomeView = activeSectionId === "home"` (검색어 유무 무관)으로 홈 탭에서는 항상 같은 입력 DOM 요소를 유지. `localValue` 상태 패턴으로 React controlled input과 IME 조합 중 충돌 방지.
+
+**2. useIMEInput 커스텀 훅 추출 (DRY)**
+`Header.tsx`와 `HomeView.tsx` 양쪽에 `isComposingRef` + `localValue` + `useEffect` + 3개 이벤트 핸들러가 동일하게 중복되어 있었다.
+`src/hooks/useIMEInput.ts`로 추출하여 두 컴포넌트 모두에서 `{ localValue, inputProps } = useIMEInput(...)` 한 줄로 대체. 유닛 테스트 `useIMEInput.test.ts` 추가.
+
+**3. isGoogleMode → isHomeView 명칭 변경**
+`isGoogleMode`는 "Google 스타일 UI"라는 구현 세부사항을 이름에 노출했다.
+`isHomeView`로 변경하여 "홈 탭이 활성화되어 있다"는 도메인 의도를 명확히 표현.
+
+**4. IIFE 제거 (HomeView.tsx 가독성 개선)**
+히어로 섹션 JSX 내에 `(() => { const isSearching = ...; return (...) })()` IIFE가 존재했다.
+컴포넌트 본문에서 `const isSearching = !!(searchQuery?.trim());`로 사전 추출하여 JSX를 단순화.
+
+**5. ExchangeRateWidget → useFetchWidget 패턴 적용**
+`ExchangeRateWidget`이 수동 `useState` 4개 + `load()` + `useEffect`로 fetch 상태를 관리하고 있었다.
+`useFetchWidget<ExchangeData>`로 교체하여 `WeatherWidget` 등과 동일한 패턴으로 통일. API 응답을 `{ rates, updatedAt }` 단일 객체로 변환하는 `fetchExchangeRates()` 함수로 분리.
+
+**6. UI/UX 전면 재설계 (고객지원팀 워크플로 중심)**
+기존 홈 화면은 개인 생활 위젯(날씨·환율·증시)이 업무 도구와 같은 비중으로 배치되어 있었다.
+- **위젯 기본 순서 재배치**: 메모→북마크→할 일→최근 수정→많이 본 문서→시계→포모도로→캘린더→D-Day→계산기 (업무 우선) → 날씨·환율·증시 (하단)
+- **홈 히어로 재설계**: 장식용 그라데이션 "홈" 대형 텍스트 제거, 오늘 날짜·인사말·포털 타이틀("유팜 고객지원 포털")·태그라인으로 교체. 검색 중에는 타이틀·섹션 버튼이 숨겨지는 컴팩트 모드 전환.
+- **검색 결과 인라인**: 홈 탭에서 검색 시 SearchResultsView가 히어로 아래에 인라인 표시 (별도 뷰로 전환 없음 → IME 안정성 확보).
+
+### 변경 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `src/hooks/useIMEInput.ts` | **신규** — IME 조합 공통 훅 |
+| `src/__tests__/hooks/useIMEInput.test.ts` | **신규** — useIMEInput 단위 테스트 6개 |
+| `src/components/Header.tsx` | useIMEInput 훅 적용, 중복 IME 코드 제거 |
+| `src/components/HomeView.tsx` | useIMEInput 적용, IIFE 제거, isSearching 추출, 히어로 재설계, SearchResultsView 인라인 |
+| `src/components/Dashboard.tsx` | `isGoogleMode` → `isHomeView`, 관련 주석 정리 |
+| `src/components/widgets/ExchangeRateWidget.tsx` | useFetchWidget 패턴 적용 |
+| `src/stores/widgetStore.ts` | 기본 위젯 순서를 업무 우선으로 재배치 |
+| `src/components/SearchResultsView.tsx` | **신규** (이전 버전에서 추가) — 관련도 순위화 검색 결과 뷰 |
+
+### 테스트
+
+- 총 361개 테스트 통과 (이전: 355개, +6개)
+- 브랜치 커버리지 90%+ 유지
+
+---
+
 ## [1.0.1] — 2026-03-15
 
 > **개발 컨텍스트**: 1인 개발, 1.0.0 출시 직후 루브릭 피드백 반영 이터레이션.

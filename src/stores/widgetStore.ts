@@ -23,18 +23,26 @@ export type WidgetId =
   | "calculator"
   | "clock";
 
-/** 기본 위젯 순서 */
+/**
+ * 기본 위젯 순서 — 고객지원팀 업무 흐름 기준으로 배치
+ *
+ * 우선순위 원칙:
+ *   1순위 (상단 행): 통화 중 즉시 필요한 도구
+ *   2순위 (중간 행): 지식베이스 탐색 + 시간 관리
+ *   3순위 (하단 행): 생산성 보조 도구
+ *   최하단: 개인 생활 정보 (업무와 직접 무관)
+ */
 export const DEFAULT_WIDGET_ORDER: WidgetId[] = [
-  // 지식베이스 탐색 (고정 1·2위)
-  "popular", "recent",
-  // 날씨 (3위 고정)
-  "weather",
-  // 업무 관리 (매일 사용)
-  "todo", "memo", "clock", "calendar", "dday",
-  // 빠른 도구
-  "bookmark", "calculator", "pomodoro",
-  // 시장·날씨 정보 (참고용)
-  "exchange", "market", "weekly-weather",
+  // 1순위: 통화 중 즉시 필요 — 메모(필기), 북마크(단골 문서), 할 일(후속 조치)
+  "memo", "bookmark", "todo",
+  // 2순위: 지식베이스 참조 + 시간 인식
+  "recent", "popular", "clock",
+  // 3순위: 생산성·일정 관리
+  "pomodoro", "calendar", "dday",
+  // 4순위: 계산기 (요금·수수료 문의 대응)
+  "calculator",
+  // 최하단: 개인 생활 정보 (업무 무관, 원하면 위로 재정렬 가능)
+  "weather", "weekly-weather", "exchange", "market",
 ];
 
 /** 위젯 스토어 상태 및 액션 타입 */

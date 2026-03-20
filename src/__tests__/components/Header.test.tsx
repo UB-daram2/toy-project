@@ -107,4 +107,44 @@ describe("Header", () => {
     fireEvent.click(toggleButton);
     expect(mockSetTheme).toHaveBeenCalledWith("dark");
   });
+
+  it("IME 조합 중에는 onChange에서 onSearchChange가 호출되지 않는다", () => {
+    const onSearchChange = jest.fn();
+    render(
+      <Header searchQuery="" onSearchChange={onSearchChange} totalDocuments={0} />
+    );
+    const input = screen.getByPlaceholderText("처리방법, 카테고리, 문서 이름 검색...");
+    // 한국어 IME 조합 시작 — 이후 onChange 는 차단되어야 한다
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: "처" } });
+    expect(onSearchChange).not.toHaveBeenCalled();
+  });
+
+  it("IME 조합 완료(onCompositionEnd) 후 onSearchChange가 최종값으로 호출된다", () => {
+    const onSearchChange = jest.fn();
+    render(
+      <Header searchQuery="" onSearchChange={onSearchChange} totalDocuments={0} />
+    );
+    const input = screen.getByPlaceholderText("처리방법, 카테고리, 문서 이름 검색...");
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: "처" } });
+    fireEvent.compositionEnd(input, { target: { value: "처방조제" } });
+    expect(onSearchChange).toHaveBeenCalledWith("처방조제");
+  });
+
+  it("IME 조합 중에 외부 searchQuery 변경이 입력창에 반영되지 않는다", () => {
+    const onSearchChange = jest.fn();
+    const { rerender } = render(
+      <Header searchQuery="" onSearchChange={onSearchChange} totalDocuments={0} />
+    );
+    const input = screen.getByPlaceholderText("처리방법, 카테고리, 문서 이름 검색...");
+    // IME 조합 시작 후 중간 입력값 설정
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: "처" } });
+    // 외부에서 searchQuery 가 변경되어도 조합 중이므로 localValue 가 덮이지 않아야 한다
+    rerender(
+      <Header searchQuery="외부변경" onSearchChange={onSearchChange} totalDocuments={0} />
+    );
+    expect(input).toHaveValue("처");
+  });
 });

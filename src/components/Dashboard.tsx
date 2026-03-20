@@ -7,7 +7,7 @@
  * 데스크톱: 좌측 글래스 사이드바 + 우측 내부 스크롤 메인 영역
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   knowledgeSections,
   countTotalLinks,
@@ -17,8 +17,10 @@ import {
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { SectionView } from "./SectionView";
+import { SearchResultsView } from "./SearchResultsView";
 import { HomeView } from "./HomeView";
-import { LayoutDashboard, BookOpen, HelpCircle, Download } from "lucide-react";
+import { LayoutDashboard, BookOpen, HelpCircle, Download, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { cn, getSectionColorClasses } from "@/lib/utils";
 
 interface DashboardProps {
@@ -36,6 +38,17 @@ export function Dashboard({ sections = knowledgeSections }: DashboardProps) {
 
   // 검색어 상태
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // 테마 토글 (Google 모드에서 헤더 대신 플로팅 버튼으로 표시)
+  const { theme, setTheme } = useTheme();
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsMounted(true);
+  }, []);
+
+  /** 홈 탭이 활성화된 상태 — 헤더를 숨기고 HomeView 내부 검색창을 유지하여 IME 안정성 보장 */
+  const isHomeView = activeSectionId === "home";
 
   // 전체 문서 수
   const totalDocuments = useMemo(
@@ -70,33 +83,51 @@ export function Dashboard({ sections = knowledgeSections }: DashboardProps) {
       />
 
       {/* 우측 메인 영역 */}
-      <div className="flex min-w-0 flex-1 flex-col md:overflow-hidden">
-        {/* 상단 헤더: 검색 + 다크모드 토글 */}
-        <Header
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          totalDocuments={totalDocuments}
-        />
+      <div className="relative flex min-w-0 flex-1 flex-col md:overflow-hidden">
+        {/* 상단 헤더: 홈 탭이 아닐 때만 표시 (홈에서는 HomeView 내부 검색창 사용) */}
+        {!isHomeView && (
+          <Header
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            totalDocuments={totalDocuments}
+          />
+        )}
+
+        {/* 홈 탭: 우측 상단 플로팅 테마 토글 (헤더가 없으므로 별도 배치) */}
+        {isHomeView && isMounted && (
+          <div className="absolute right-4 top-4 z-50">
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              aria-label="테마 전환"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200/60 bg-white/90 text-gray-500 shadow-sm backdrop-blur-sm transition-all hover:border-gray-300 hover:bg-white hover:text-gray-900 dark:border-zinc-700/60 dark:bg-zinc-900/90 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-100"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        )}
 
         {/* 콘텐츠 영역: 모바일은 하단 네비 높이만큼 여백 확보 */}
         <main className="flex-1 overflow-y-auto px-4 py-5 pb-28 md:px-6 md:py-6 md:pb-6">
-          {activeSectionId === "home" && !searchQuery.trim() ? (
-            <HomeView sections={sections} />
-          ) : activeSectionData ? (
-            <SectionView
-              section={activeSectionData}
-              isSearchResult={!!searchQuery.trim()}
+          {isHomeView ? (
+            /* 홈 탭: 홈 히어로(검색창·섹션 링크)·검색 결과·위젯 그리드 */
+            <HomeView
+              sections={sections}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              totalDocuments={totalDocuments}
+              onSectionSelect={setActiveSectionId}
             />
-          ) : (
-            <div className="flex h-full items-center justify-center text-gray-400 dark:text-zinc-500">
-              <div className="text-center">
-                <p className="text-lg font-medium">검색 결과 없음</p>
-                <p className="mt-1 text-sm">
-                  &quot;{searchQuery}&quot;에 해당하는 문서를 찾을 수 없습니다.
-                </p>
-              </div>
-            </div>
-          )}
+          ) : searchQuery.trim() ? (
+            /* 검색어 있음: 관련도 순위화 결과 뷰 */
+            <SearchResultsView sections={sections} query={searchQuery} />
+          ) : activeSectionData ? (
+            /* 섹션 탐색: 선택된 섹션 콘텐츠 */
+            <SectionView section={activeSectionData} isSearchResult={false} />
+          ) : null}
         </main>
       </div>
 

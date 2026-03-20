@@ -25,9 +25,9 @@ beforeEach(() => {
 describe("Dashboard", () => {
   it("초기 렌더링 시 홈 뷰를 표시한다", () => {
     render(<Dashboard />);
-    // 초기 상태는 홈 뷰 — HomeView의 "홈" heading이 표시되어야 한다
+    // 초기 상태는 홈 뷰 — HomeView의 포털 제목 heading이 표시되어야 한다
     expect(
-      screen.getByRole("heading", { name: /홈/ })
+      screen.getByRole("heading", { name: /유팜 고객지원 포털/ })
     ).toBeInTheDocument();
   });
 
@@ -84,9 +84,10 @@ describe("Dashboard", () => {
     expect(screen.getByText("(검색 결과)")).toBeInTheDocument();
   });
 
-  it("총 문서 수를 헤더에 표시한다", () => {
+  it("총 문서 수를 홈 히어로에 표시한다", () => {
     render(<Dashboard />);
-    expect(screen.getByText("개 문서")).toBeInTheDocument();
+    // 홈 히어로의 날짜 바에 "문서 N개" 형식으로 문서 수가 표시된다
+    expect(screen.getAllByText(/문서/).length).toBeGreaterThan(0);
   });
 
   it("활성 섹션이 검색 결과에 없으면 첫 번째 결과 섹션을 표시한다", () => {

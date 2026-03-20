@@ -19,23 +19,23 @@ describe("widgetStore — 초기 상태", () => {
 describe("widgetStore — reorder", () => {
   it("두 위젯의 순서를 교환한다", () => {
     const { reorder } = useWidgetStore.getState();
-    // popular(0) → recent(1) 위치로 이동: 결과는 [recent, popular, ...]
-    reorder("popular", "recent");
+    // memo(0) → bookmark(1) 위치로 이동: 결과는 [bookmark, memo, ...]
+    reorder("memo", "bookmark");
     const { widgetOrder } = useWidgetStore.getState();
-    expect(widgetOrder[0]).toBe("recent");
-    expect(widgetOrder[1]).toBe("popular");
+    expect(widgetOrder[0]).toBe("bookmark");
+    expect(widgetOrder[1]).toBe("memo");
   });
 
   it("같은 위젯끼리 reorder하면 순서가 변하지 않는다", () => {
     const { reorder } = useWidgetStore.getState();
-    reorder("recent", "recent");
+    reorder("memo", "memo");
     const { widgetOrder } = useWidgetStore.getState();
     expect(widgetOrder).toEqual(DEFAULT_WIDGET_ORDER);
   });
 
   it("존재하지 않는 위젯 ID로 reorder해도 상태가 변하지 않는다", () => {
     const { reorder } = useWidgetStore.getState();
-    reorder("recent", "unknown-widget" as WidgetId);
+    reorder("memo", "unknown-widget" as WidgetId);
     const { widgetOrder } = useWidgetStore.getState();
     expect(widgetOrder).toEqual(DEFAULT_WIDGET_ORDER);
   });
@@ -43,9 +43,9 @@ describe("widgetStore — reorder", () => {
 
 describe("widgetStore — reset", () => {
   it("reset 호출 시 기본 순서로 복원된다", () => {
-    // 먼저 순서를 변경한다 (popular이 1번으로 밀려남)
-    useWidgetStore.getState().reorder("popular", "recent");
-    expect(useWidgetStore.getState().widgetOrder[0]).toBe("recent");
+    // 먼저 순서를 변경한다 (bookmark이 0번으로 이동)
+    useWidgetStore.getState().reorder("memo", "bookmark");
+    expect(useWidgetStore.getState().widgetOrder[0]).toBe("bookmark");
 
     // reset 후 기본 순서로 돌아온다
     useWidgetStore.getState().reset();

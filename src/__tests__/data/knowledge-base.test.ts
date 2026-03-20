@@ -6,6 +6,7 @@ import {
   knowledgeSections,
   countTotalLinks,
   searchKnowledge,
+  searchKnowledgeRanked,
   KnowledgeSection,
 } from "@/data/knowledge-base";
 
@@ -118,6 +119,54 @@ describe("searchKnowledge (지식베이스 검색)", () => {
     const results = searchKnowledge(sampleSections, "섹션 A");
     expect(results).toHaveLength(1);
     expect(results[0].id).toBe("section-a");
+  });
+});
+
+describe("searchKnowledgeRanked (관련도 순위화 검색)", () => {
+  it("빈 검색어이면 빈 배열을 반환한다", () => {
+    expect(searchKnowledgeRanked(sampleSections, "")).toHaveLength(0);
+    expect(searchKnowledgeRanked(sampleSections, "   ")).toHaveLength(0);
+  });
+
+  it("관련 없는 검색어이면 빈 배열을 반환한다", () => {
+    expect(searchKnowledgeRanked(sampleSections, "존재하지않는검색어xyz")).toHaveLength(0);
+  });
+
+  it("정확 일치 결과가 부분 일치보다 높은 점수를 가진다", () => {
+    const results = searchKnowledgeRanked(sampleSections, "처방조제");
+    expect(results.length).toBeGreaterThan(0);
+    // 정확 일치("처방조제")가 첫 번째 결과여야 한다
+    expect(results[0].link.title).toBe("처방조제");
+    expect(results[0].score).toBeGreaterThanOrEqual(100);
+  });
+
+  it("결과가 점수 내림차순으로 정렬된다", () => {
+    const results = searchKnowledgeRanked(sampleSections, "카테고리");
+    // 모든 연속된 쌍에서 앞 항목 점수 >= 뒤 항목 점수
+    for (let i = 0; i < results.length - 1; i++) {
+      expect(results[i].score).toBeGreaterThanOrEqual(results[i + 1].score);
+    }
+  });
+
+  it("각 결과에 link, category, section, score 필드가 있다", () => {
+    const results = searchKnowledgeRanked(sampleSections, "처방조제");
+    expect(results[0]).toHaveProperty("link");
+    expect(results[0]).toHaveProperty("category");
+    expect(results[0]).toHaveProperty("section");
+    expect(results[0]).toHaveProperty("score");
+  });
+
+  it("카테고리 제목 일치도 결과에 포함된다", () => {
+    const results = searchKnowledgeRanked(sampleSections, "VAN Plus");
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].link.title).toBe("VAN Plus 사용법");
+  });
+
+  it("바이그램 유사도로 부분 일치 단어도 탐지한다", () => {
+    // "처방" 검색 시 "처방조제", "보험청구"는 아니지만 "처방조제"가 포함
+    const results = searchKnowledgeRanked(sampleSections, "처방");
+    const titles = results.map((r) => r.link.title);
+    expect(titles).toContain("처방조제");
   });
 });
 

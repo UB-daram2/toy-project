@@ -9,7 +9,8 @@
 
 import { Search, Sun, Moon, X } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useIMEInput } from "@/hooks/useIMEInput";
 
 interface HeaderProps {
   /** 현재 검색어 */
@@ -29,6 +30,25 @@ export function Header({ searchQuery, onSearchChange, totalDocuments }: HeaderPr
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
   }, []);
+
+  // Google 랜딩 모드에서 전환 시 포커스 유지
+  // 검색어가 있는 채로 헤더가 마운트되면 (Google 히어로 → 헤더 전환) 입력창에 포커스한다
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (searchQuery && inputRef.current) {
+      inputRef.current.focus();
+      // 커서를 텍스트 끝으로 이동한다
+      const len = inputRef.current.value.length;
+      inputRef.current.setSelectionRange(len, len);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 마운트 시 1회만 실행
+
+  // 한국어 IME 조합 처리 — useIMEInput 훅으로 localValue와 이벤트 핸들러를 한번에 관리
+  const { localValue, inputProps: imeInputProps } = useIMEInput({
+    value: searchQuery,
+    onChange: onSearchChange,
+  });
 
   /** 다크/라이트 모드를 토글한다 */
   function toggleTheme() {
@@ -70,10 +90,11 @@ export function Header({ searchQuery, onSearchChange, totalDocuments }: HeaderPr
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
           <input
+            ref={inputRef}
             type="text"
             placeholder="처리방법, 카테고리, 문서 이름 검색..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localValue}
+            {...imeInputProps}
             className="w-full rounded-xl border border-gray-200/80 bg-gray-50/80 py-2 pl-9 pr-8 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-100 dark:placeholder-zinc-500 dark:focus:bg-zinc-900 dark:focus:border-indigo-500/50 dark:focus:ring-indigo-500/10"
           />
           {/* 검색어 지우기 버튼 */}

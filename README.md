@@ -52,7 +52,7 @@
 - **모바일 반응형 레이아웃** — 모바일: 세로 자연 스크롤 + 하단 플로팅 네비게이션 바 / 데스크톱: 좌측 사이드바 고정
 - **글래스모피즘 UI** — `backdrop-blur-2xl` + 반투명 배경으로 헤더·사이드바·하단 네비 계층감 구현, 인디고→바이올렛 그라디언트 활성 상태
 - **그라데이션 카드 디자인** — 홈 위젯·카테고리 카드 상단 3px 컬러 그라데이션 스트라이프, `hover:shadow-lg` + `hover:-translate-y-0.5` 마이크로 인터랙션 (DnD 중 자동 비활성화)
-- **히어로 배너** — 홈(시간대별 인사말·통계 배지)·섹션(테마색 그라데이션) 상단 배너로 맥락 즉시 전달
+- **홈 히어로 검색 섹션** — 날짜·요일 표시 + "유팜 고객지원 포털" 타이틀 + 실시간 검색창; 검색어 입력 시 컴팩트 모드로 전환, IME 조합 중 DOM 요소가 유지되어 한국어 입력 안정성 보장
 
 ## 사용자 시나리오
 
@@ -99,7 +99,7 @@
 | next-themes | 최신 | SSR-safe 다크모드 전환 |
 | lucide-react | 최신 | 일관된 아이콘 셋 |
 | Zustand | 최신 | 위젯 순서·메모·D-Day·북마크·투두 상태 persist (localStorage 자동 영속화, SSR-safe) |
-| Jest + React Testing Library | 최신 | 333개 테스트 (API Route 포함), 브랜치 커버리지 92%+, 90% 강제 |
+| Jest + React Testing Library | 최신 | 361개 테스트 (API Route 포함), 브랜치 커버리지 92%+, 90% 강제 |
 | Playwright | 최신 | E2E 4종: smoke(3) · widgets(14) · section(4) · viewport(반응형 9개) |
 
 ### 외부 API 의존성 및 안정성 평가
@@ -165,7 +165,7 @@ npm run dev        # http://localhost:3000
 ```bash
 npm run dev            # 개발 서버 실행
 npm run build          # 프로덕션 빌드
-npm test               # 테스트 실행 (333개)
+npm test               # 테스트 실행 (361개)
 npm run test:coverage  # 커버리지 리포트 (90% 이상 유지)
 npm run test:e2e       # E2E 테스트 (Playwright, smoke·widgets·section·viewport)
 npm run lint           # ESLint 검사
@@ -216,7 +216,9 @@ src/
 │   ├── bookmarkStore.ts               # Zustand persist — 북마크 목록
 │   └── todoStore.ts                   # Zustand persist — 투두 목록 (최대 30개)
 ├── hooks/
-│   └── usePomodoro.ts                 # 포모도로 타이머 커스텀 훅
+│   ├── usePomodoro.ts                 # 포모도로 타이머 커스텀 훅
+│   ├── useFetchWidget.ts              # 외부 API 위젯 공통 fetch 훅 (data/isLoading/error/retry)
+│   └── useIMEInput.ts                 # 한국어 IME 조합 추적 훅 (Header·HomeView 공용)
 └── lib/
     ├── notion-structure.ts            # Notion 계층 구조 동적 파싱 (서버 전용)
     ├── view-tracker.ts                # localStorage 열람 수 추적 (클라이언트 전용)
@@ -252,7 +254,7 @@ push / PR
   ├─ npm audit    — 알려진 보안 취약점 검출 (high 이상 시 실패)
   ├─ ESLint       — 코드 품질 정적 분석
   ├─ tsc --noEmit — 런타임 전 타입 오류 검출
-  ├─ test:coverage — Jest 333개 + 커버리지 90% 미달 시 실패
+  ├─ test:coverage — Jest 361개 + 커버리지 90% 미달 시 실패
   └─ build        — Next.js 프로덕션 빌드 성공 여부 확인
   │
   ▼ (build-and-test 통과 시)
@@ -292,17 +294,17 @@ CD 설정: GitHub 저장소 Secrets에 `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_
 ## 테스트
 
 ```bash
-npm test                  # 전체 테스트 (333개)
+npm test                  # 전체 테스트 (361개)
 npm run test:coverage     # 커버리지 (전역 90% 이상 강제)
 ```
 
 | 지표 | 수치 |
 |------|------|
-| 테스트 수 | 333개 (API Route 포함) |
-| 구문 커버리지 | 97.30% |
-| 브랜치 커버리지 | 91.36% |
-| 함수 커버리지 | 97.60% |
-| 라인 커버리지 | 98.37% |
+| 테스트 수 | 361개 (API Route + 훅 단위 테스트 포함) |
+| 구문 커버리지 | 97%+ |
+| 브랜치 커버리지 | 92%+ |
+| 함수 커버리지 | 97%+ |
+| 라인 커버리지 | 98%+ |
 
 커버리지 기준 미달 시 CI가 실패합니다 (`jest.config.ts` 참고).
 
