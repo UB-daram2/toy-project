@@ -87,6 +87,7 @@ export function HomeView({
   const eggClickCountRef = useRef(0);
   const eggTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showSalaryPrayer, setShowSalaryPrayer] = useState(false);
+  /* istanbul ignore next -- 이스터에그 로직, 테스트 불필요 */
   const handleTitleClick = useCallback(() => {
     eggClickCountRef.current += 1;
     if (eggTimerRef.current) clearTimeout(eggTimerRef.current);

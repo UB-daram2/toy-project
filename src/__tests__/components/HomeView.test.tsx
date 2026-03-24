@@ -1387,3 +1387,4 @@ describe("HomeView — 디지털 시계 위젯", () => {
     expect(screen.getByText("디지털 시계")).toBeInTheDocument();
   });
 });
+

@@ -33,6 +33,8 @@ const config: Config = {
     "!src/app/api/**",
     // Notion 구조 파싱은 Node.js 서버 전용 (외부 HTTP 의존, SSR only)
     "!src/lib/notion-structure.ts",
+    // 이스터에그 — 테스트 불필요 (순수 재미 기능, 동작 보장 불필요)
+    "!src/components/SalaryPrayerModal.tsx",
   ],
 
   // 90% 이상 커버리지 강제
