@@ -10,9 +10,10 @@
  *   - 터치: Pointer Events API + setPointerCapture (HTML5 DnD는 터치에서 불안정)
  */
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useIMEInput } from "@/hooks/useIMEInput";
 import { GripVertical, Search, X } from "lucide-react";
+import { SalaryPrayerModal } from "./SalaryPrayerModal";
 import type { KnowledgeSection } from "@/data/knowledge-base";
 import { cn } from "@/lib/utils";
 import { extractPageIdFromUrl } from "@/lib/utils";
@@ -81,6 +82,24 @@ export function HomeView({
     value: searchQuery ?? "",
     onChange: onSearchChange ?? (() => {}),
   });
+
+  // 🙏 이스터에그: 포털 타이틀 5번 빠르게 클릭 시 월급 기도 모달 등장
+  const eggClickCountRef = useRef(0);
+  const eggTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showSalaryPrayer, setShowSalaryPrayer] = useState(false);
+  const handleTitleClick = useCallback(() => {
+    eggClickCountRef.current += 1;
+    if (eggTimerRef.current) clearTimeout(eggTimerRef.current);
+    if (eggClickCountRef.current >= 5) {
+      eggClickCountRef.current = 0;
+      setShowSalaryPrayer(true);
+    } else {
+      // 800ms 이내 추가 클릭이 없으면 카운터 리셋
+      eggTimerRef.current = setTimeout(() => {
+        eggClickCountRef.current = 0;
+      }, 800);
+    }
+  }, []);
 
   // 위젯 순서 — Zustand 스토어에서 가져온다 (persist 미들웨어로 localStorage 자동 영속화)
   const { widgetOrder, reorder: reorderWidgets } = useWidgetStore();
@@ -183,6 +202,10 @@ export function HomeView({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* 🙏 월급 기도 이스터에그 모달 */}
+      {showSalaryPrayer && (
+        <SalaryPrayerModal onClose={() => setShowSalaryPrayer(false)} />
+      )}
       {/* 히어로 섹션 — 홈 히어로 vs 기존 그라데이션 배너 */}
       {onSearchChange !== undefined ? (
         /* ── 기술지원 포털 홈 히어로 ──
@@ -214,7 +237,11 @@ export function HomeView({
           {/* 포털 타이틀 + 태그라인 — 검색 중에는 숨김 */}
           {!isSearching && (
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-zinc-100 md:text-3xl">
+              {/* 타이틀을 5번 빠르게 클릭하면 이스터에그 등장 */}
+              <h2
+                className="cursor-default select-none text-2xl font-bold text-gray-900 dark:text-zinc-100 md:text-3xl"
+                onClick={handleTitleClick}
+              >
                 유팜 기술지원 포털
               </h2>
               <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
