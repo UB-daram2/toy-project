@@ -7,10 +7,11 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
-import { Cloud, Wind, Droplets, RefreshCw } from "lucide-react";
+import { Cloud, Wind, Droplets } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFetchWidget } from "@/hooks/useFetchWidget";
 import { WidgetCard } from "./WidgetCard";
+import { WidgetLoadingSpinner, WidgetError } from "./WidgetFeedback";
 
 /** WMO 날씨 코드 → 한국어 레이블 + 이모지 */
 export const WEATHER_LABEL: Record<number, { label: string; emoji: string }> = {
@@ -126,21 +127,9 @@ export function WeatherWidget() {
       title="날씨 & 미세먼지"
       accentGradient="from-emerald-500 to-teal-600"
     >
-      {isLoading && (
-        <div className="flex items-center justify-center py-4">
-          <RefreshCw className="h-4 w-4 animate-spin text-gray-400" />
-        </div>
-      )}
+      {isLoading && <WidgetLoadingSpinner />}
       {error && (
-        <div className="text-center">
-          <p className="text-xs text-gray-400">날씨 정보를 불러올 수 없습니다</p>
-          <button
-            onClick={handleRetry}
-            className="mt-2 text-xs text-emerald-500 hover:underline"
-          >
-            다시 시도
-          </button>
-        </div>
+        <WidgetError message="날씨 정보를 불러올 수 없습니다" onRetry={handleRetry} />
       )}
       {weather && !isLoading && (
         <div className="flex flex-col gap-4">

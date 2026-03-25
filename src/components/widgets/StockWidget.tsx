@@ -7,10 +7,11 @@
  * useFetchWidget 훅으로 isLoading·error·data 공통 상태를 관리한다.
  */
 
-import { BarChart2, RefreshCw } from "lucide-react";
+import { BarChart2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WidgetCard } from "./WidgetCard";
 import { useFetchWidget } from "@/hooks/useFetchWidget";
+import { WidgetLoadingSpinner, WidgetError } from "./WidgetFeedback";
 
 /** 증시 지수 데이터 타입 */
 interface StockIndex {
@@ -38,18 +39,9 @@ export function StockWidget() {
       title="국내 증시"
       accentGradient="from-indigo-500 to-blue-600"
     >
-      {isLoading && (
-        <div className="flex items-center justify-center py-4">
-          <RefreshCw className="h-4 w-4 animate-spin text-gray-400" />
-        </div>
-      )}
+      {isLoading && <WidgetLoadingSpinner />}
       {error && (
-        <div className="text-center">
-          <p className="text-xs text-gray-400">증시 정보를 불러올 수 없습니다</p>
-          <button onClick={retry} className="mt-2 text-xs text-indigo-500 hover:underline">
-            다시 시도
-          </button>
-        </div>
+        <WidgetError message="증시 정보를 불러올 수 없습니다" onRetry={retry} />
       )}
       {!isLoading && !error && (!indices || indices.length === 0) && (
         <p className="text-center text-xs text-gray-400">데이터가 없습니다</p>

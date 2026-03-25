@@ -852,6 +852,85 @@ describe("NotionModal", () => {
     });
   });
 
+  it("toggle 블록을 details/summary로 렌더링한다", async () => {
+    mockFetchSuccess([
+      {
+        id: "block-toggle",
+        type: "toggle",
+        toggle: {
+          rich_text: [{ plain_text: "토글 제목", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }],
+        },
+      },
+    ]);
+
+    const { container } = render(
+      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector("details")).toBeInTheDocument();
+      expect(screen.getByText("토글 제목")).toBeInTheDocument();
+    });
+  });
+
+  it("file 블록(URL 있음, size null)을 다운로드 링크로 렌더링한다", async () => {
+    mockFetchSuccess([
+      {
+        id: "block-file-no-size",
+        type: "file",
+        file: { name: "report.docx", size: null, url: "https://s3.amazonaws.com/report.docx" },
+      },
+    ]);
+
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+
+    await waitFor(() => {
+      const link = screen.getByText("report.docx").closest("a");
+      expect(link).toHaveAttribute("download", "report.docx");
+      // size가 null이면 크기 텍스트가 렌더링되지 않는다
+      expect(screen.queryByText(/KB|MB|GB/)).not.toBeInTheDocument();
+    });
+  });
+
+  it("file 블록(URL 없음, size 있음)에서 크기를 표시하고 Notion 안내를 보인다", async () => {
+    mockFetchSuccess([
+      {
+        id: "block-file-no-url-with-size",
+        type: "file",
+        file: { name: "sheet.xlsx", size: "200 KB", url: null },
+      },
+    ]);
+
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("sheet.xlsx")).toBeInTheDocument();
+      expect(screen.getByText("200 KB")).toBeInTheDocument();
+    });
+  });
+
+  it("child_page 블록에 plain_text가 없으면 '페이지' 기본 제목을 사용한다", async () => {
+    const subPageUrl = "https://www.notion.so/87e1f915cdf083ca827e812ef3a5a3e2";
+    mockFetchSuccess([
+      {
+        id: "block-child-no-title",
+        type: "child_page",
+        child_page: {
+          url: subPageUrl,
+          // rich_text 항목은 있지만 plain_text가 없어 "페이지" 폴백 사용
+          rich_text: [{ href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }],
+        },
+      },
+    ]);
+
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+
+    await waitFor(() => {
+      // plain_text가 없으면 "페이지" 기본 텍스트가 버튼에 표시된다
+      expect(screen.getByText("페이지")).toBeInTheDocument();
+    });
+  });
+
   it("뒤로가기 버튼 클릭 시 이전 페이지로 돌아간다", async () => {
     const subPageUrl = "https://www.notion.so/87e1f915cdf083ca827e812ef3a5a3e1";
     mockFetchSuccess([

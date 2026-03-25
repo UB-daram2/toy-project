@@ -7,11 +7,12 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
-import { Cloud, RefreshCw } from "lucide-react";
+import { Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFetchWidget } from "@/hooks/useFetchWidget";
 import { WidgetCard } from "./WidgetCard";
 import { WEATHER_LABEL } from "./WeatherWidget";
+import { WidgetLoadingSpinner, WidgetError } from "./WidgetFeedback";
 
 /** 주간 예보 1일치 데이터 타입 */
 interface DailyForecast {
@@ -80,21 +81,12 @@ export function WeeklyWeatherWidget() {
       title="주간 날씨 예보"
       accentGradient="from-cyan-500 to-sky-500"
     >
-      {isLoading && (
-        <div className="flex items-center justify-center py-4">
-          <RefreshCw className="h-4 w-4 animate-spin text-gray-400" />
-        </div>
-      )}
+      {isLoading && <WidgetLoadingSpinner />}
       {error && (
-        <div className="text-center">
-          <p className="text-xs text-gray-400">날씨 정보를 불러올 수 없습니다</p>
-          <button
-            onClick={() => { coordsRef.current = { lat: 37.5665, lon: 126.978 }; retry(); }}
-            className="mt-2 text-xs text-cyan-500 hover:underline"
-          >
-            다시 시도
-          </button>
-        </div>
+        <WidgetError
+          message="날씨 정보를 불러올 수 없습니다"
+          onRetry={() => { coordsRef.current = { lat: 37.5665, lon: 126.978 }; retry(); }}
+        />
       )}
       {!isLoading && !error && forecasts.length > 0 && (
         <div className="grid grid-cols-7 gap-1">

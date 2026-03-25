@@ -12,11 +12,11 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useIMEInput } from "@/hooks/useIMEInput";
+import { useDragDropWidgets } from "@/hooks/useDragDropWidgets";
 import { GripVertical, Search, X } from "lucide-react";
 import { SalaryPrayerModal } from "./SalaryPrayerModal";
 import type { KnowledgeSection } from "@/data/knowledge-base";
-import { cn } from "@/lib/utils";
-import { extractPageIdFromUrl } from "@/lib/utils";
+import { cn, extractPageIdFromUrl } from "@/lib/utils";
 import { NotionModal } from "./NotionModal";
 import { SearchResultsView } from "./SearchResultsView";
 import { useWidgetStore, type WidgetId } from "@/stores/widgetStore";
@@ -103,68 +103,19 @@ export function HomeView({
   }, []);
 
   // 위젯 순서 — Zustand 스토어에서 가져온다 (persist 미들웨어로 localStorage 자동 영속화)
-  const { widgetOrder, reorder: reorderWidgets } = useWidgetStore();
-  // 현재 드래그 중인 위젯 ID와 드롭 대상 위젯 ID를 ref 로 추적한다
-  // (상태 업데이트 전 이벤트 핸들러에서 참조하기 위해 ref 사용)
-  const draggingIdRef = useRef<WidgetId | null>(null);
-  const dropTargetIdRef = useRef<WidgetId | null>(null);
-  const [draggingId, setDraggingId] = useState<WidgetId | null>(null);
-  const [dropTargetId, setDropTargetId] = useState<WidgetId | null>(null);
+  const { widgetOrder } = useWidgetStore();
 
-  // ── HTML5 DnD 핸들러 (마우스 / 트랙패드) ──
-  const handleDragStart = (e: React.DragEvent, id: WidgetId) => {
-    e.dataTransfer.effectAllowed = "move";
-    draggingIdRef.current = id;
-    setDraggingId(id);
-  };
-
-  const handleDragOver = (e: React.DragEvent, id: WidgetId) => {
-    e.preventDefault();
-    dropTargetIdRef.current = id;
-    if (id !== dropTargetId) setDropTargetId(id);
-  };
-
-  const handleDragEnd = () => {
-    if (draggingIdRef.current && dropTargetIdRef.current) {
-      reorderWidgets(draggingIdRef.current, dropTargetIdRef.current);
-    }
-    draggingIdRef.current = null;
-    dropTargetIdRef.current = null;
-    setDraggingId(null);
-    setDropTargetId(null);
-  };
-
-  // ── 포인터 이벤트 핸들러 (터치 전용 — 드래그 핸들에서만 시작) ──
-  const handleHandlePointerDown = (e: React.PointerEvent, id: WidgetId) => {
-    // 마우스는 HTML5 DnD 로 처리하므로 터치만 여기서 처리한다
-    if (e.pointerType === "mouse") return;
-    e.preventDefault(); // 스크롤 방지
-    (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    draggingIdRef.current = id;
-    setDraggingId(id);
-  };
-
-  const handleHandlePointerMove = (e: React.PointerEvent) => {
-    if (!draggingIdRef.current || e.pointerType === "mouse") return;
-    // 포인터 아래의 카드를 찾아 드롭 대상으로 지정한다
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    const card = el?.closest("[data-widget-id]");
-    const targetId = card?.getAttribute("data-widget-id") as WidgetId | null;
-    if (targetId && targetId !== dropTargetIdRef.current) {
-      dropTargetIdRef.current = targetId;
-      setDropTargetId(targetId);
-    }
-  };
-
-  const handleHandlePointerUp = () => {
-    if (draggingIdRef.current && dropTargetIdRef.current) {
-      reorderWidgets(draggingIdRef.current, dropTargetIdRef.current);
-    }
-    draggingIdRef.current = null;
-    dropTargetIdRef.current = null;
-    setDraggingId(null);
-    setDropTargetId(null);
-  };
+  // DnD 상태와 핸들러 — useDragDropWidgets 훅으로 관심사 분리
+  const {
+    draggingId,
+    dropTargetId,
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+    handleHandlePointerDown,
+    handleHandlePointerMove,
+    handleHandlePointerUp,
+  } = useDragDropWidgets();
 
   // 모달 열기 + 열람 수 기록
   const openModal = (url: string, title: string) => {

@@ -218,6 +218,73 @@ describe("Notion Route — GET 정상 응답", () => {
     expect(body.blocks[0].divider).toEqual({});
   });
 
+  it("file 블록의 name/size/source를 추출한다", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeRecordMap(UUID_ID, ["b1"], {
+          b1: {
+            type: "file",
+            properties: {
+              title: [["manual.pdf"]],
+              size: [["512 KB"]],
+              source: [["https://s3.amazonaws.com/manual.pdf"]],
+            },
+          },
+        }),
+    });
+    // signed URL 조회 실패 시 source 제거 후 반환
+    mockFetch.mockResolvedValueOnce({ ok: false });
+    const res = await GET(new Request("http://localhost"), makeParams(RAW_ID));
+    const body = await res.json();
+    expect(body.blocks[0].type).toBe("file");
+    expect(body.blocks[0].file.name).toBe("manual.pdf");
+    expect(body.blocks[0].file.size).toBe("512 KB");
+    expect(body.blocks[0].file.url).toBeNull();
+    // source는 클라이언트에 노출되지 않는다
+    expect(body.blocks[0].file.source).toBeUndefined();
+  });
+
+  it("file 블록에 properties가 없으면 기본값을 사용한다", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeRecordMap(UUID_ID, ["b1"], {
+          b1: { type: "file" },
+        }),
+    });
+    const res = await GET(new Request("http://localhost"), makeParams(RAW_ID));
+    const body = await res.json();
+    expect(body.blocks[0].file.name).toBe("파일");
+    expect(body.blocks[0].file.size).toBeNull();
+    expect(body.blocks[0].file.url).toBeNull();
+  });
+
+  it("file 블록의 signed URL 획득 성공 시 url 필드가 교체된다", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeRecordMap(UUID_ID, ["b1"], {
+          b1: {
+            type: "file",
+            properties: {
+              title: [["doc.pdf"]],
+              source: [["https://s3.amazonaws.com/doc.pdf"]],
+            },
+          },
+        }),
+    });
+    // signed URL 조회 성공
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ signedUrls: ["https://signed.notion.so/doc.pdf"] }),
+    });
+    const res = await GET(new Request("http://localhost"), makeParams(RAW_ID));
+    const body = await res.json();
+    expect(body.blocks[0].file.url).toBe("https://signed.notion.so/doc.pdf");
+    expect(body.blocks[0].file.source).toBeUndefined();
+  });
+
   it("지원하지 않는 블록 타입은 필터링된다", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -320,6 +387,58 @@ describe("Notion Route — rich_text 장식 변환", () => {
     const res = await GET(new Request("http://localhost"), makeParams(RAW_ID));
     const body = await res.json();
     expect(body.blocks[0].paragraph.rich_text).toEqual([]);
+  });
+
+  it("strikethrough(s) 장식을 올바르게 변환한다", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeRecordMap(UUID_ID, ["b1"], {
+          b1: { type: "text", properties: { title: [["취소선", [["s"]]]] } },
+        }),
+    });
+    const res = await GET(new Request("http://localhost"), makeParams(RAW_ID));
+    const body = await res.json();
+    expect(body.blocks[0].paragraph.rich_text[0].annotations.strikethrough).toBe(true);
+  });
+
+  it("underline(_) 장식을 올바르게 변환한다", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeRecordMap(UUID_ID, ["b1"], {
+          b1: { type: "text", properties: { title: [["밑줄", [["_"]]]] } },
+        }),
+    });
+    const res = await GET(new Request("http://localhost"), makeParams(RAW_ID));
+    const body = await res.json();
+    expect(body.blocks[0].paragraph.rich_text[0].annotations.underline).toBe(true);
+  });
+
+  it("code(c) 장식을 올바르게 변환한다", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeRecordMap(UUID_ID, ["b1"], {
+          b1: { type: "text", properties: { title: [["코드", [["c"]]]] } },
+        }),
+    });
+    const res = await GET(new Request("http://localhost"), makeParams(RAW_ID));
+    const body = await res.json();
+    expect(body.blocks[0].paragraph.rich_text[0].annotations.code).toBe(true);
+  });
+
+  it("link(a) 장식에 URL 값이 없으면 href를 null로 변환한다", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeRecordMap(UUID_ID, ["b1"], {
+          b1: { type: "text", properties: { title: [["링크", [["a"]]]] } },
+        }),
+    });
+    const res = await GET(new Request("http://localhost"), makeParams(RAW_ID));
+    const body = await res.json();
+    expect(body.blocks[0].paragraph.rich_text[0].href).toBeNull();
   });
 });
 

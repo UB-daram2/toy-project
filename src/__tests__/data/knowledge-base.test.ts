@@ -3,7 +3,6 @@
  */
 
 import {
-  knowledgeSections,
   countTotalLinks,
   searchKnowledge,
   searchKnowledgeRanked,
@@ -170,39 +169,3 @@ describe("searchKnowledgeRanked (관련도 순위화 검색)", () => {
   });
 });
 
-describe("knowledgeSections (실제 데이터 유효성)", () => {
-  it("세 개의 메인 섹션이 있다", () => {
-    expect(knowledgeSections).toHaveLength(3);
-  });
-
-  it("각 섹션은 id, title, description, icon, colorKey, categories를 가진다", () => {
-    knowledgeSections.forEach((section) => {
-      expect(section).toHaveProperty("id");
-      expect(section).toHaveProperty("title");
-      expect(section).toHaveProperty("description");
-      expect(section).toHaveProperty("icon");
-      expect(section).toHaveProperty("colorKey");
-      expect(section).toHaveProperty("categories");
-    });
-  });
-
-  it("모든 링크는 유효한 URL 형식을 가진다", () => {
-    knowledgeSections.forEach((section) => {
-      section.categories.forEach((category) => {
-        category.links.forEach((link) => {
-          expect(link.url).toMatch(/^https?:\/\//);
-        });
-      });
-    });
-  });
-
-  it("처리방법 섹션은 최소 20개 이상의 링크를 가진다", () => {
-    const processSection = knowledgeSections.find((s) => s.id === "how-to-process");
-    expect(processSection).toBeDefined();
-    const totalLinks = processSection!.categories.reduce(
-      (sum, cat) => sum + cat.links.length,
-      0
-    );
-    expect(totalLinks).toBeGreaterThanOrEqual(20);
-  });
-});

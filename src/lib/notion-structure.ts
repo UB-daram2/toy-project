@@ -18,6 +18,13 @@ import type {
 /** 기술지원 최상위 Notion 페이지 ID */
 const ROOT_PAGE_ID = "40e1f915cdf083b1a12c81d925ccecca";
 
+/** 한 번의 loadPageChunk 요청으로 가져올 최대 블록 수.
+ *  100으로 설정 시 DFS 순서로 카테고리 직접 자식만 blockMap에 포함되어
+ *  링크 레벨 페이지가 섹션 blockMap에서 자연스럽게 제외된다.
+ *  섹션의 링크 레벨 직접 자식(처방조제 등)은 카테고리 하위 트리를 모두 순회한 뒤에야
+ *  blockMap에 들어오므로, 100 블록 한도 내에서 카테고리 레벨만 처리된다. */
+const BLOCK_FETCH_LIMIT = 100;
+
 /** 섹션 제목별 UI 설정 (아이콘, 색상, 설명) */
 const SECTION_UI_CONFIG: Record<
   string,
@@ -74,7 +81,7 @@ async function fetchBlockMap(pageId: string): Promise<Record<string, NotionRawBl
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         pageId: formattedId,
-        limit: 100,
+        limit: BLOCK_FETCH_LIMIT,
         cursor: { stack: [] },
         chunkNumber: 0,
         verticalColumns: false,
@@ -84,7 +91,7 @@ async function fetchBlockMap(pageId: string): Promise<Record<string, NotionRawBl
     });
     if (!res.ok) return {};
     const data = await res.json();
-    return data.recordMap?.block ?? {};
+    return (data.recordMap?.block ?? {}) as Record<string, NotionRawBlock>;
   } catch {
     return {};
   }
@@ -98,20 +105,22 @@ function extractTitle(blockValue: NotionRawBlockValue | undefined): string {
 }
 
 /**
- * 카테고리 페이지(예: 유팜시스템)에서 링크 목록을 가져온다.
- * 카테고리 페이지의 자식 블록 중 type: "page" 인 것을 링크로 수집한다.
+ * 카테고리 페이지(예: 유팜시스템)를 직접 조회하여 제목과 링크 목록을 반환한다.
+ * 섹션 blockMap에 카테고리 블록이 없는 경우를 대비해 항상 독립적으로 fetch한다.
  */
-async function fetchCategoryLinks(
+async function fetchCategoryData(
   categoryPageId: string
-): Promise<KnowledgeLink[]> {
+): Promise<{ title: string; links: KnowledgeLink[] } | null> {
   const blockMap = await fetchBlockMap(categoryPageId);
   const formattedId = formatPageId(categoryPageId);
   const pageBlock = blockMap[formattedId]?.value;
-  if (!pageBlock) return [];
+  // page 타입이 아니면 카테고리가 아니다
+  if (!pageBlock || pageBlock.type !== "page") return null;
 
+  const title = extractTitle(pageBlock);
   const contentIds: string[] = pageBlock.content ?? [];
 
-  return contentIds
+  const links = contentIds
     .map((id) => {
       const block = blockMap[id]?.value;
       // 서브페이지 타입만 링크로 수집한다
@@ -127,12 +136,17 @@ async function fetchCategoryLinks(
       return entry;
     })
     .filter((link): link is KnowledgeLink => link !== null);
+
+  return { title, links };
 }
 
 /**
  * 섹션 페이지를 파싱하여 카테고리 그룹과 링크 목록을 반환한다.
- * 섹션 페이지의 자식 page 블록이 각 카테고리가 되며,
- * 각 카테고리 페이지의 하위 page 블록들이 링크가 된다.
+ *
+ * BLOCK_FETCH_LIMIT=100으로 가져온 섹션 blockMap에는 DFS 순서상 카테고리 레벨 블록만
+ * 포함된다. 섹션의 링크 레벨 직접 자식(카테고리 아닌 페이지)은 카테고리 하위 트리 순회
+ * 이후에 등장하므로 100 블록 한도를 초과해 blockMap에서 제외된다.
+ * blockMap 기반 필터링으로 이 특성을 이용해 카테고리 레벨만 정확히 처리한다.
  */
 async function parseSectionCategories(
   sectionPageId: string
@@ -144,7 +158,8 @@ async function parseSectionCategories(
 
   const contentIds: string[] = pageBlock.content ?? [];
 
-  // 섹션 페이지의 직접 자식 중 page 타입 블록을 카테고리로 수집
+  // 섹션 페이지의 직접 자식 중 blockMap에 있는 page 타입 블록을 카테고리로 수집한다.
+  // blockMap에 없는 ID(링크 레벨 직접 자식)는 undefined → 필터링 제외된다.
   const categoryBlocks = contentIds
     .map((id) => blockMap[id]?.value)
     .filter(
@@ -152,22 +167,43 @@ async function parseSectionCategories(
         block !== undefined && block.type === "page"
     );
 
-  // 각 카테고리 페이지의 링크를 병렬로 가져온다
-  const categories = await Promise.all(
-    categoryBlocks.map(async (categoryBlock) => {
-      const categoryId = categoryBlock.id;
-      const categoryTitle = extractTitle(categoryBlock);
-      const links = await fetchCategoryLinks(categoryId);
-      return {
-        id: stripHyphens(categoryId),
-        title: categoryTitle,
-        links,
-      } satisfies KnowledgeCategory;
-    })
-  );
+  // 카테고리를 3개씩 배치 처리한다.
+  // Promise.all로 전부 동시 fetch하면 Notion이 일부 요청을 throttle해 빈 응답을 반환하므로
+  // 배치로 나눠 동시 요청 수를 제한하고, 배치 간 500ms 대기로 rate limit 압력을 줄인다.
+  const BATCH = 3;
+  const BATCH_DELAY_MS = 500;
+  const allCategories: (KnowledgeCategory | null)[] = [];
 
-  // 링크가 없는 카테고리는 제외한다
-  return categories.filter((c) => c.links.length > 0);
+  for (let i = 0; i < categoryBlocks.length; i += BATCH) {
+    // 첫 번째 배치를 제외하고 배치 간 대기하여 연속 요청으로 인한 rate limit을 방지한다
+    if (i > 0) {
+      await new Promise<void>((r) => setTimeout(r, BATCH_DELAY_MS));
+    }
+    const batch = categoryBlocks.slice(i, i + BATCH);
+    const batchResults = await Promise.all(
+      batch.map(async (categoryBlock) => {
+        const categoryId = categoryBlock.id;
+        const categoryTitle = extractTitle(categoryBlock);
+
+        // 빈 응답이면 500ms 후 1회 재시도한다 (rate limit 대응)
+        let data = await fetchCategoryData(categoryId);
+        if (!data) {
+          await new Promise<void>((r) => setTimeout(r, 500));
+          data = await fetchCategoryData(categoryId);
+        }
+
+        if (!data || data.links.length === 0) return null;
+        return {
+          id: stripHyphens(categoryId),
+          title: categoryTitle,
+          links: data.links,
+        } satisfies KnowledgeCategory;
+      })
+    );
+    allCategories.push(...batchResults);
+  }
+
+  return allCategories.filter((c): c is KnowledgeCategory => c !== null);
 }
 
 /**

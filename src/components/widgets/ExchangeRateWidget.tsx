@@ -7,9 +7,10 @@
  * useFetchWidget으로 data/isLoading/error/retry 상태를 추상화한다.
  */
 
-import { DollarSign, RefreshCw } from "lucide-react";
+import { DollarSign } from "lucide-react";
 import { WidgetCard } from "./WidgetCard";
 import { useFetchWidget } from "@/hooks/useFetchWidget";
+import { WidgetLoadingSpinner, WidgetError } from "./WidgetFeedback";
 
 /** 환율 데이터 타입 */
 interface ExchangeRate {
@@ -51,18 +52,9 @@ export function ExchangeRateWidget() {
       title="환율 (1 USD 기준)"
       accentGradient="from-amber-500 to-orange-500"
     >
-      {isLoading && (
-        <div className="flex items-center justify-center py-4">
-          <RefreshCw className="h-4 w-4 animate-spin text-gray-400" />
-        </div>
-      )}
+      {isLoading && <WidgetLoadingSpinner />}
       {error && (
-        <div className="text-center">
-          <p className="text-xs text-gray-400">환율 정보를 불러올 수 없습니다</p>
-          <button onClick={retry} className="mt-2 text-xs text-amber-500 hover:underline">
-            다시 시도
-          </button>
-        </div>
+        <WidgetError message="환율 정보를 불러올 수 없습니다" onRetry={retry} />
       )}
       {!isLoading && !error && data && (
         <div className="flex flex-col gap-2">
