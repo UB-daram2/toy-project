@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./node_modules/.bin/jest \"Dashboard|HomeView\" --no-coverage)",
+      "Bash(node_modules/.bin/jest \"Dashboard|HomeView\" --no-coverage)",
+      "Bash(ls /c/Users/daram2/Desktop/toy-project/node_modules/.bin/jest*)",
+      "Bash(cmd /c \"npm test 2>&1\")",
+      "Bash(cmd /c \"cd /d C:\\\\Users\\\\daram2\\\\Desktop\\\\toy-project && npm test -- --watchAll=false 2>&1\")",
+      "Bash(powershell -Command \"Get-Content ''C:\\\\Users\\\\daram2\\\\Desktop\\\\toy-project\\\\package.json'' | Select-String ''jest|test''\")",
+      "Bash(powershell -Command \"Test-Path ''C:\\\\Users\\\\daram2\\\\Desktop\\\\toy-project\\\\node_modules\\\\.bin\\\\jest''\")",
+      "Bash(powershell -Command \"Test-Path ''C:\\\\Users\\\\daram2\\\\Desktop\\\\toy-project\\\\node_modules''\")",
+      "Bash(gh run:*)",
+      "Bash(gh workflow:*)",
+      "Bash(node -e \":*)",
+      "Bash(cp \"C:/Users/daram2/Downloads/IMG_0275.jpg\" \"c:/Users/daram2/Desktop/toy-project/public/salary-prayer-1.jpg\")",
+      "Bash(cp \"C:/Users/daram2/Downloads/IMG_7867.jpg\" \"c:/Users/daram2/Desktop/toy-project/public/salary-prayer-2.jpg\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(start http://localhost:3000)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(taskkill /PID 87896 /F)",
+      "Bash(cmd /c \"taskkill /PID 87896 /F\")",
+      "Bash(cmd /c \"netstat -ano | findstr :3000\")",
+      "Bash(cmd /c \"netstat -aon | findstr LISTEN | findstr :3000\")",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":3000 \\\\|:3001 \\\\|:3002 \\\\|:3003 \")",
+      "Bash(powershell -Command \"Stop-Process -Id 87896 -Force -ErrorAction SilentlyContinue; Write-Host ''killed''\")",
+      "Bash(powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Select-Object Id, CPU, StartTime | Format-Table\")",
+      "Bash(powershell -Command \"Stop-Process -Name node -Force -ErrorAction SilentlyContinue; Write-Host ''all node processes killed''\")",
+      "Bash(powershell -Command \"Remove-Item ''c:\\\\Users\\\\daram2\\\\Desktop\\\\toy-project\\\\.next\\\\dev\\\\lock'' -Force -ErrorAction SilentlyContinue; Write-Host ''lock removed''\")",
+      "Bash(kill 67876)"
+    ]
+  }
+}

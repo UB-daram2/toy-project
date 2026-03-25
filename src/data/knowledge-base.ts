@@ -1,6 +1,7 @@
 /**
  * 유팜시스템 지원 포털 지식베이스 타입 정의 및 검색 유틸리티
  * 실제 데이터는 런타임에 /api/knowledge-structure 에서 동적으로 로딩한다.
+ * Notion 접근 불가 시 knowledgeSections 정적 폴백으로 기본 UI를 보장한다.
  */
 
 /** 개별 Notion 문서 링크 */
@@ -30,6 +31,38 @@ export interface KnowledgeSection {
   colorKey: "blue" | "violet" | "emerald";
   categories: KnowledgeCategory[];
 }
+
+/**
+ * 정적 폴백 섹션 데이터
+ * Notion API 접근 불가 시 사용한다. 섹션 제목·설명·아이콘만 포함하며
+ * 실제 링크 목록은 동적 로딩 후에야 채워진다.
+ */
+export const knowledgeSections: KnowledgeSection[] = [
+  {
+    id: "how-to-process",
+    title: "처리방법이 궁금해요",
+    description: "유팜시스템 기능별 처리 방법 안내",
+    icon: "BookOpen",
+    colorKey: "blue",
+    categories: [],
+  },
+  {
+    id: "how-to-use",
+    title: "사용방법이 궁금해요",
+    description: "유팜시스템 소프트웨어 사용 방법 안내",
+    icon: "HelpCircle",
+    colorKey: "violet",
+    categories: [],
+  },
+  {
+    id: "need-file",
+    title: "파일이 필요해요",
+    description: "설치 파일 및 업데이트 파일 제공",
+    icon: "Download",
+    colorKey: "emerald",
+    categories: [],
+  },
+];
 
 /**
  * 전체 링크 수를 계산한다.

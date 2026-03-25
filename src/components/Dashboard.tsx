@@ -43,10 +43,15 @@ import { cn, getSectionColorClasses } from "@/lib/utils";
 const MOBILE_ICON_MAP = { BookOpen, HelpCircle, Download } as const;
 type MobileIconName = keyof typeof MOBILE_ICON_MAP;
 
-export function Dashboard() {
-  // 지식베이스 구조 로딩 (자동 재시도 포함)
+interface DashboardProps {
+  /** 서버사이드에서 미리 로딩된 초기 섹션 (page.tsx Server Component에서 전달) */
+  initialSections?: KnowledgeSection[];
+}
+
+export function Dashboard({ initialSections = [] }: DashboardProps) {
+  // 지식베이스 구조 로딩 (서버 초기 데이터 기반, 백그라운드 갱신 + localStorage 캐시)
   const { sections, status, retryAttempt, maxRetries, retry } =
-    useKnowledgeStructure();
+    useKnowledgeStructure(initialSections);
 
   // 현재 활성 섹션 ID (초기값: "home")
   const [activeSectionId, setActiveSectionId] = useState<string>("home");

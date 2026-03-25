@@ -10,7 +10,7 @@
  *   캐시 있음: 즉시 캐시 표시, 백그라운드 갱신 → success | cached
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { KnowledgeSection } from "@/data/knowledge-base";
 
 /** 기술지원 최상위 Notion 페이지 URL (에러 시 안내용) */
@@ -66,18 +66,28 @@ function saveCache(sections: KnowledgeSection[]): void {
   }
 }
 
-export function useKnowledgeStructure(): UseKnowledgeStructureResult {
-  // SSR 하이드레이션 일치를 위해 초기값은 항상 빈 배열 (캐시 로딩은 useEffect 내 load()에서 처리)
-  const [sections, setSections] = useState<KnowledgeSection[]>([]);
-  const [status, setStatus] = useState<KnowledgeStatus>("loading");
+export function useKnowledgeStructure(
+  /** 서버사이드에서 미리 로딩된 초기 섹션. 제공 시 즉시 success 상태로 시작한다 */
+  initialSections: KnowledgeSection[] = []
+): UseKnowledgeStructureResult {
+  // initialSections가 있으면 즉시 표시 (SSR과 동일한 값이 전달되므로 하이드레이션 안전)
+  const [sections, setSections] = useState<KnowledgeSection[]>(initialSections);
+  const [status, setStatus] = useState<KnowledgeStatus>(
+    initialSections.length > 0 ? "success" : "loading"
+  );
   const [retryAttempt, setRetryAttempt] = useState(0);
 
+  // useCallback deps 안정화를 위해 initialSections는 ref로 관리 (마운트 시 고정)
+  const initialSectionsRef = useRef(initialSections);
+
   const load = useCallback(async () => {
-    // load() 시작 시점의 캐시 보유 여부 확인 (useEffect 내에서만 호출되므로 window 항상 존재)
+    // load() 시작 시점의 캐시 및 초기 데이터 보유 여부 확인
     const cachedSections = loadCache();
     const hasCached = cachedSections.length > 0;
+    // 캐시 또는 서버 초기 데이터가 있으면 fetch 중에도 빈 화면이 표시되지 않는다
+    const hasDisplayData = hasCached || initialSectionsRef.current.length > 0;
 
-    // 캐시가 있으면 즉시 표시 (빈 화면 방지), 항상 loading 으로 전환해 갱신 중임을 표시
+    // 캐시가 있으면 즉시 표시, 항상 loading으로 전환해 갱신 중임을 알린다
     if (hasCached) {
       setSections(cachedSections);
     }
@@ -87,8 +97,8 @@ export function useKnowledgeStructure(): UseKnowledgeStructureResult {
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       // 재시도 전 상태 업데이트 및 대기
       if (attempt > 0) {
-        // 캐시가 없을 때만 retrying 배너 표시
-        if (!hasCached) {
+        // 표시 중인 데이터가 없을 때만 retrying 배너 표시
+        if (!hasDisplayData) {
           setStatus("retrying");
         }
         setRetryAttempt(attempt);
@@ -108,11 +118,14 @@ export function useKnowledgeStructure(): UseKnowledgeStructureResult {
         setStatus("success");
         return;
       } catch {
-        // 마지막 시도 실패 시 캐시 유무에 따라 상태 결정
+        // 마지막 시도 실패 시 캐시 → 서버 초기 데이터 → error 순으로 폴백
         if (attempt === MAX_ATTEMPTS - 1) {
           if (hasCached) {
-            // 이전 캐시로 폴백
             setSections(cachedSections);
+            setStatus("cached");
+          } else if (initialSectionsRef.current.length > 0) {
+            // 서버 초기 데이터(또는 정적 폴백)를 cached 상태로 유지
+            setSections(initialSectionsRef.current);
             setStatus("cached");
           } else {
             setStatus("error");
