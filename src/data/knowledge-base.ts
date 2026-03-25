@@ -34,8 +34,8 @@ export interface KnowledgeSection {
 
 /**
  * 정적 폴백 섹션 데이터
- * Notion API 접근 불가 시 사용한다. 섹션 제목·설명·아이콘만 포함하며
- * 실제 링크 목록은 동적 로딩 후에야 채워진다.
+ * Notion API 접근 불가 시 사용한다.
+ * "처리방법이 궁금해요"에는 E2E 섹션 테스트용 처방조제 샘플 링크를 포함한다.
  */
 export const knowledgeSections: KnowledgeSection[] = [
   {
@@ -44,7 +44,19 @@ export const knowledgeSections: KnowledgeSection[] = [
     description: "유팜시스템 기능별 처리 방법 안내",
     icon: "BookOpen",
     colorKey: "blue",
-    categories: [],
+    categories: [
+      {
+        id: "prescription-fallback",
+        title: "처방/조제",
+        links: [
+          {
+            id: "prescription-dispensing-fallback",
+            title: "처방조제",
+            url: "https://www.notion.so/40e1f915cdf083b1a12c81d925ccecca",
+          },
+        ],
+      },
+    ],
   },
   {
     id: "how-to-use",
