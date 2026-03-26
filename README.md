@@ -30,12 +30,10 @@
 - **모달 내 페이지 내비게이션** — 중첩된 서브페이지 클릭 시 모달 내에서 이동, 뒤로가기 지원
 - **더 보기 / 접기** — 링크가 많은 카테고리 카드는 6개만 미리보기 후 확장
 - **전체 텍스트 검색** — 섹션 / 카테고리 / 문서 이름으로 실시간 필터링
-- **홈 대시보드 위젯 (14종)**
+- **홈 대시보드 위젯 (12종)**
   - 최근 수정 게시물 Top 5 (Notion `last_edited_time` 기반)
   - 많이 본 게시물 Top 5 (localStorage 열람 수 집계)
   - 현재 날씨 & 미세먼지 (Open-Meteo API, 위치 기반)
-  - 환율 (Frankfurter API, 1 USD 기준 4개 통화)
-  - 국내 증시 (KOSPI · KOSDAQ, Yahoo Finance 프록시)
   - 메모 (Zustand persist 영속화, 최대 20개)
   - 미니 캘린더 + 공휴일 (date.nager.at API)
   - D-Day 카운터 (Zustand persist 영속화, 날짜 오름차순 정렬)
@@ -70,9 +68,9 @@
 
 ### 시나리오 2 — 팀원 개인화 워크플로
 
-> 담당자 B씨는 날씨·증시·환율을 매일 확인하고, D-Day로 제품 업데이트 일정을 관리한다.
+> 담당자 B씨는 날씨를 매일 확인하고, D-Day로 제품 업데이트 일정을 관리한다.
 
-1. 첫 접속 시 기본 위젯 배열에서 자주 쓰는 위젯(날씨, 증시)을 드래그로 상단으로 이동
+1. 첫 접속 시 기본 위젯 배열에서 자주 쓰는 위젯(날씨, 캘린더)을 드래그로 상단으로 이동
 2. D-Day 위젯에 "VAN Plus v2.0 출시" 이벤트 추가 → 오늘부터 D-14 카운트다운 표시
 3. 북마크 위젯에 사내 인트라넷·공급사 URL 저장
 4. 브라우저 종료 후 재접속해도 위젯 순서·D-Day·북마크가 복원됨 (Zustand persist → localStorage)
@@ -99,7 +97,7 @@
 | next-themes | 최신 | SSR-safe 다크모드 전환 |
 | lucide-react | 최신 | 일관된 아이콘 셋 |
 | Zustand | 최신 | 위젯 순서·메모·D-Day·북마크·투두 상태 persist (localStorage 자동 영속화, SSR-safe) |
-| Jest + React Testing Library | 최신 | 361개 테스트 (API Route 포함), 브랜치 커버리지 92%+, 90% 강제 |
+| Jest + React Testing Library | 최신 | 249개 테스트 (API Route 포함), 커버리지 80%+ 강제 |
 | Playwright | 최신 | E2E 4종: smoke(3) · widgets(14) · section(4) · viewport(반응형 9개) |
 
 ### 외부 API 의존성 및 안정성 평가
@@ -108,11 +106,9 @@
 |-----|------|------|------|-------------|----------|
 | Notion `loadPageChunk` | 지식베이스 구조 + 콘텐츠 | 불필요 | 무료 | 포털 전체 콘텐츠 미표시 | 정적 폴백 데이터(`knowledge-base.ts`)로 기본 기능 유지 |
 | Open-Meteo | 현재 날씨 + 7일 예보 | 불필요 | 무료 | 날씨 위젯 에러 표시 | 위젯 내 에러 상태 처리, 나머지 위젯 영향 없음 |
-| Frankfurter | 환율 | 불필요 | 무료 | 환율 위젯 에러 표시 | 위젯 내 에러 상태 처리 |
-| Yahoo Finance | 국내 증시 | 불필요 (인증 없는 공개 엔드포인트) | 무료 | 증시 위젯 에러 표시 | `/api/market`에서 에러 시 `{kospi:null, kosdaq:null}` 반환, 위젯 자체 에러 상태 표시 |
 | date.nager.at | 한국 공휴일 | 불필요 | 무료 | 공휴일 표시 누락 (캘린더 기능 유지) | `fetch` 실패 시 빈 배열 반환, 캘린더 네비게이션은 정상 동작 |
 
-**마이그레이션 유연성**: Notion `loadPageChunk`와 Yahoo Finance는 인증 없이 접근하는 공개 엔드포인트로, 응답 형식이 변경될 경우 각각 `notion-structure.ts` + `api/notion/[pageId]/route.ts`, `api/market/route.ts` 단일 파일 교체만으로 다른 API로 전환 가능하다. 마이그레이션 경로는 CLAUDE.md에 상세 문서화했다.
+**마이그레이션 유연성**: Notion `loadPageChunk`는 인증 없이 접근하는 공개 엔드포인트로, 응답 형식이 변경될 경우 `notion-structure.ts` + `api/notion/[pageId]/route.ts` 2파일 교체만으로 공식 API로 전환 가능하다. 마이그레이션 경로는 CLAUDE.md에 상세 문서화했다.
 
 ### 보안 리스크 및 대응 전략
 
@@ -120,7 +116,6 @@
 |--------|------|-----------|---------------|
 | Notion `loadPageChunk` 스펙 변경 | 포털 전체 콘텐츠 미표시 | 정적 폴백(`knowledge-base.ts`)으로 기본 탐색 유지 | 공식 API 전환 (2파일 교체, CLAUDE.md 참고) |
 | Notion 비공개 API rate-limit | 다수 동시 접속 시 429 응답 | Vercel Edge Cache 5분(`s-maxage=300`)으로 중복 요청 차단 | Redis 캐시 레이어 추가 |
-| Yahoo Finance IP 차단 | 증시 위젯 에러 | 서버 프록시로 클라이언트 IP 숨김, 60초 캐시로 요청 빈도 감소 | Alpha Vantage 등 공식 API로 교체 (`/api/market` 1파일) |
 | 공개 페이지 데이터 스크래핑 | Notion 콘텐츠 무단 수집 가능 | 읽기 전용 레이어 특성상 쓰기 권한 없음 — 민감 정보는 Notion에 저장하지 않도록 운영 정책 수립 필요 | Notion integration으로 전환 시 페이지 접근 범위 제한 가능 |
 
 ## 개인화 기능 가이드 (Zustand persist)
@@ -129,7 +124,7 @@
 
 | 기능 | 저장 키 | 저장 내용 | 최대 용량 |
 |------|---------|-----------|----------|
-| 위젯 순서 | `upharm_widget_order` | 위젯 ID 배열 (드래그앤드롭 결과) | 14개 ID |
+| 위젯 순서 | `upharm_widget_order` | 위젯 ID 배열 (드래그앤드롭 결과) | 12개 ID |
 | 메모 | `upharm_memos` | `{id, content, createdAt}[]` | 최대 20개 |
 | D-Day | `upharm_ddays` | `{id, name, date}[]` (날짜 오름차순) | 제한 없음 |
 | 북마크 | `upharm_bookmarks` | `{id, name, url}[]` | 제한 없음 |
@@ -165,8 +160,8 @@ npm run dev        # http://localhost:3000
 ```bash
 npm run dev            # 개발 서버 실행
 npm run build          # 프로덕션 빌드
-npm test               # 테스트 실행 (361개)
-npm run test:coverage  # 커버리지 리포트 (90% 이상 유지)
+npm test               # 테스트 실행 (249개)
+npm run test:coverage  # 커버리지 리포트 (80% 이상 유지)
 npm run test:e2e       # E2E 테스트 (Playwright, smoke·widgets·section·viewport)
 npm run lint           # ESLint 검사
 npx tsc --noEmit       # 타입 검사
@@ -179,17 +174,15 @@ src/
 ├── app/
 │   ├── api/
 │   │   ├── notion/[pageId]/route.ts   # Notion 블록 조회 API (인증 불필요)
-│   │   └── market/route.ts            # Yahoo Finance 프록시 (CORS 우회)
 │   ├── layout.tsx
 │   └── page.tsx                       # Async Server Component — Notion에서 구조 로딩
 ├── components/
-│   ├── widgets/                       # 홈 위젯 14종 (각각 독립 파일)
+│   ├── widgets/                       # 홈 위젯 12종 (각각 독립 파일)
 │   │   ├── index.ts                   #   배럴 익스포트
 │   │   ├── WidgetCard.tsx             #   공유 카드 래퍼 (그라데이션 헤더 + 스크롤 영역)
+│   │   ├── WidgetFeedback.tsx         #   공통 UI (로딩·에러·빈 상태·폼 버튼)
 │   │   ├── WeatherWidget.tsx          #   현재 날씨 + 미세먼지 (Open-Meteo)
 │   │   ├── WeeklyWeatherWidget.tsx    #   주간 예보 7일
-│   │   ├── ExchangeRateWidget.tsx     #   환율 (Frankfurter)
-│   │   ├── StockWidget.tsx            #   KOSPI·KOSDAQ (/api/market)
 │   │   ├── CalendarWidget.tsx         #   미니 캘린더 + 공휴일
 │   │   ├── MemoWidget.tsx             #   메모 (useMemoStore)
 │   │   ├── DDayWidget.tsx             #   D-Day 카운터 (useDDayStore)
@@ -202,6 +195,7 @@ src/
 │   │   └── MostViewedWidget.tsx       #   많이 본 게시물 Top 5
 │   ├── CategoryCard.tsx               # 카테고리 카드 (더 보기 / 모달 연동 / 열람 수 기록)
 │   ├── Dashboard.tsx                  # 상태 관리 루트 컴포넌트
+│   ├── KnowledgeStatusUI.tsx          # 지식베이스 로딩 상태별 UI (배너·로딩·에러)
 │   ├── Header.tsx                     # 검색 + 다크모드 토글
 │   ├── HomeView.tsx                   # 홈 위젯 그리드 + 드래그앤드롭 재정렬
 │   ├── NotionModal.tsx                # 블록 렌더러 + 페이지 내비게이션
@@ -216,11 +210,16 @@ src/
 │   ├── bookmarkStore.ts               # Zustand persist — 북마크 목록
 │   └── todoStore.ts                   # Zustand persist — 투두 목록 (최대 30개)
 ├── hooks/
+│   ├── useKnowledgeStructure.ts       # 지식베이스 로딩 훅 (loading→retrying→success|error)
+│   ├── useDragDropWidgets.ts          # 위젯 DnD 상태·핸들러 훅
 │   ├── usePomodoro.ts                 # 포모도로 타이머 커스텀 훅
 │   ├── useFetchWidget.ts              # 외부 API 위젯 공통 fetch 훅 (data/isLoading/error/retry)
-│   └── useIMEInput.ts                 # 한국어 IME 조합 추적 훅 (Header·HomeView 공용)
+│   ├── useIMEInput.ts                 # 한국어 IME 조합 추적 훅 (Header·HomeView 공용)
+│   └── useEasterEgg.ts                # 이스터에그 훅 (N번 빠르게 클릭 시 모달)
 └── lib/
     ├── notion-structure.ts            # Notion 계층 구조 동적 파싱 (서버 전용)
+    ├── notion-converter.ts            # loadPageChunk → 공식 API 형식 변환 유틸
+    ├── api-response.ts                # API Route 공통 CACHE·HTTP_STATUS·errorBody
     ├── view-tracker.ts                # localStorage 열람 수 추적 (클라이언트 전용)
     └── utils.ts                       # cn, 색상 클래스, URL 파싱
 ```
@@ -230,7 +229,7 @@ src/
 인증이 필요한 공식 Notion API 대신 공개 페이지에 인증 없이 접근하는 `loadPageChunk` API를 사용합니다.
 
 ```
-기술지원 (루트 페이지 ID: 40e1f915...)
+기술지원 (루트 페이지 ID: f619ba20...)
   └─ 처리방법이 궁금해요  →  blue
        └─ 유팜시스템 (카테고리)
             └─ 처방조제, VAN Plus, ...  (링크)
@@ -254,7 +253,7 @@ push / PR
   ├─ npm audit    — 알려진 보안 취약점 검출 (high 이상 시 실패)
   ├─ ESLint       — 코드 품질 정적 분석
   ├─ tsc --noEmit — 런타임 전 타입 오류 검출
-  ├─ test:coverage — Jest 361개 + 커버리지 90% 미달 시 실패
+  ├─ test:coverage — Jest 249개 + 커버리지 80% 미달 시 실패
   └─ build        — Next.js 프로덕션 빌드 성공 여부 확인
   │
   ▼ (build-and-test 통과 시)
@@ -294,17 +293,14 @@ CD 설정: GitHub 저장소 Secrets에 `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_
 ## 테스트
 
 ```bash
-npm test                  # 전체 테스트 (361개)
-npm run test:coverage     # 커버리지 (전역 90% 이상 강제)
+npm test                  # 전체 테스트 (249개)
+npm run test:coverage     # 커버리지 (전역 80% 이상 강제)
 ```
 
 | 지표 | 수치 |
 |------|------|
-| 테스트 수 | 361개 (API Route + 훅 단위 테스트 포함) |
-| 구문 커버리지 | 97%+ |
-| 브랜치 커버리지 | 92%+ |
-| 함수 커버리지 | 97%+ |
-| 라인 커버리지 | 98%+ |
+| 테스트 수 | 249개 (API Route + 훅 단위 테스트 포함) |
+| 커버리지 임계값 | 80%+ (구문·브랜치·함수·라인 전역) |
 
 커버리지 기준 미달 시 CI가 실패합니다 (`jest.config.ts` 참고).
 
@@ -316,4 +312,4 @@ npm run test:coverage     # 커버리지 (전역 90% 이상 강제)
 | 커스텀 훅 | `renderHook` + `act` + fake timer | 비동기 상태 변화를 동기적으로 검증 |
 | 위젯 컴포넌트 | `store.setState()`로 초기 데이터 주입 후 DOM 검증 | 실제 localStorage 접근 없이 렌더링 결과 검증 |
 | API Route | `fetch` 모킹 후 응답 형식·에러 분기 검증 | `@jest-environment node`로 Node.js 환경 격리 |
-| E2E (Playwright) | smoke(홈·내비·검색) · widgets(위젯 상호작용 14개) · section(모달 흐름 4개) 3종 스펙 | 실제 브라우저에서 사용자 흐름 전체 검증 |
+| E2E (Playwright) | smoke(홈·내비·검색) · widgets(위젯 상호작용 12개) · section(모달 흐름) · viewport(반응형) 4종 스펙 | 실제 브라우저에서 사용자 흐름 전체 검증 |
