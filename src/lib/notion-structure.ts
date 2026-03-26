@@ -16,7 +16,7 @@ import type {
 } from "@/data/knowledge-base";
 
 /** 기술지원 최상위 Notion 페이지 ID */
-const ROOT_PAGE_ID = "40e1f915cdf083b1a12c81d925ccecca";
+const ROOT_PAGE_ID = "f619ba2093174f54b31f1c5eba82a468";
 
 /** 한 번의 loadPageChunk 요청으로 가져올 최대 블록 수.
  *  100으로 설정 시 DFS 순서로 카테고리 직접 자식만 blockMap에 포함되어
@@ -72,29 +72,47 @@ function formatPageId(pageId: string): string {
   return `${pageId.slice(0, 8)}-${pageId.slice(8, 12)}-${pageId.slice(12, 16)}-${pageId.slice(16, 20)}-${pageId.slice(20)}`;
 }
 
-/** Notion 내부 API(loadPageChunk)로 페이지 블록 맵을 가져온다 */
+/** 429 레이트 리밋 시 대기 후 재시도하는 최대 횟수 */
+const MAX_RETRIES = 2;
+/** 429 재시도 간 대기 시간 (ms) */
+const RETRY_DELAY_MS = 2000;
+
+/** Notion 내부 API(loadPageChunk)로 페이지 블록 맵을 가져온다.
+ *  429 레이트 리밋 시 최대 2회 재시도한다. */
 async function fetchBlockMap(pageId: string): Promise<Record<string, NotionRawBlock>> {
   const formattedId = formatPageId(pageId);
-  try {
-    const res = await fetch("https://www.notion.so/api/v3/loadPageChunk", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        pageId: formattedId,
-        limit: BLOCK_FETCH_LIMIT,
-        cursor: { stack: [] },
-        chunkNumber: 0,
-        verticalColumns: false,
-      }),
-      // 항상 최신 Notion 데이터를 가져온다
-      cache: "no-store",
-    });
-    if (!res.ok) return {};
-    const data = await res.json();
-    return (data.recordMap?.block ?? {}) as Record<string, NotionRawBlock>;
-  } catch {
-    return {};
+  const body = JSON.stringify({
+    pageId: formattedId,
+    limit: BLOCK_FETCH_LIMIT,
+    cursor: { stack: [] },
+    chunkNumber: 0,
+    verticalColumns: false,
+  });
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch("https://www.notion.so/api/v3/loadPageChunk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        // Next.js fetch 캐시: 5분간 재사용하여 Notion 호출 횟수를 줄인다
+        next: { revalidate: 300 },
+      });
+
+      // 429 레이트 리밋 → 대기 후 재시도
+      if (res.status === 429 && attempt < MAX_RETRIES) {
+        await new Promise<void>((r) => setTimeout(r, RETRY_DELAY_MS));
+        continue;
+      }
+
+      if (!res.ok) return {};
+      const data = await res.json();
+      return (data.recordMap?.block ?? {}) as Record<string, NotionRawBlock>;
+    } catch {
+      return {};
+    }
   }
+  return {};
 }
 
 /** 블록의 properties.title 배열에서 텍스트 내용을 추출한다 */

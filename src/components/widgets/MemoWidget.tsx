@@ -10,15 +10,16 @@ import { useRef, useState } from "react";
 import { StickyNote, Plus, Trash2 } from "lucide-react";
 import { useMemoStore } from "@/stores/memoStore";
 import { WidgetCard } from "./WidgetCard";
+import { WidgetEmptyState } from "./WidgetFeedback";
 
 export function MemoWidget() {
   // 메모 상태는 Zustand 스토어가 관리한다 (persist 미들웨어로 localStorage 자동 영속화)
-  const { memos, addMemo: storAddMemo, removeMemo } = useMemoStore();
+  const { memos, addMemo: storeAddMemo, removeMemo } = useMemoStore();
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const addMemo = () => {
-    storAddMemo(input);
+    storeAddMemo(input);
     setInput("");
     inputRef.current?.focus();
   };
@@ -51,9 +52,7 @@ export function MemoWidget() {
 
       {/* 메모 목록 */}
       {memos.length === 0 ? (
-        <p className="text-center text-xs text-gray-400 dark:text-zinc-500">
-          메모가 없습니다
-        </p>
+        <WidgetEmptyState message="메모가 없습니다" />
       ) : (
         <ul className="flex max-h-44 flex-col gap-1.5 overflow-y-auto">
           {memos.map((memo) => (

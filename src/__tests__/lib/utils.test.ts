@@ -59,25 +59,25 @@ describe("getSectionColorClasses (섹션 색상 클래스)", () => {
 describe("extractPageIdFromUrl (Notion URL에서 페이지 ID 추출)", () => {
   it("단순 URL에서 32자리 ID를 추출한다", () => {
     expect(
-      extractPageIdFromUrl("https://www.notion.so/87e1f915cdf083ca827e812ef3a5a3e0")
-    ).toBe("87e1f915cdf083ca827e812ef3a5a3e0");
+      extractPageIdFromUrl("https://u-pham.notion.site/f619ba2093174f54b31f1c5eba82a468")
+    ).toBe("f619ba2093174f54b31f1c5eba82a468");
   });
 
   it("제목 접두사가 있는 URL에서 ID를 추출한다", () => {
     expect(
-      extractPageIdFromUrl("https://www.notion.so/VAN-Plus-fbe1f915cdf0838bb5ad016165c5c443")
+      extractPageIdFromUrl("https://u-pham.notion.site/VAN-Plus-fbe1f915cdf0838bb5ad016165c5c443")
     ).toBe("fbe1f915cdf0838bb5ad016165c5c443");
   });
 
   it("숫자 접두사가 있는 URL에서 ID를 추출한다", () => {
     expect(
-      extractPageIdFromUrl("https://www.notion.so/3-f911f915cdf0833ea1a681d2e71c974f")
+      extractPageIdFromUrl("https://u-pham.notion.site/3-f911f915cdf0833ea1a681d2e71c974f")
     ).toBe("f911f915cdf0833ea1a681d2e71c974f");
   });
 
   it("DB 접두사가 있는 URL에서 ID를 추출한다", () => {
     expect(
-      extractPageIdFromUrl("https://www.notion.so/DB-eca1f915cdf082918fc70105a19bc644")
+      extractPageIdFromUrl("https://u-pham.notion.site/DB-eca1f915cdf082918fc70105a19bc644")
     ).toBe("eca1f915cdf082918fc70105a19bc644");
   });
 

@@ -42,12 +42,12 @@ const sampleSections: KnowledgeSection[] = [
           {
             id: "link-1",
             title: "처방조제",
-            url: "https://www.notion.so/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            url: "https://u-pham.notion.site/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           },
           {
             id: "link-2",
             title: "처방점검",
-            url: "https://www.notion.so/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            url: "https://u-pham.notion.site/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
           },
         ],
       },
@@ -67,7 +67,7 @@ const sampleSections: KnowledgeSection[] = [
           {
             id: "link-3",
             title: "유팜시스템 관련",
-            url: "https://www.notion.so/cccccccccccccccccccccccccccccccc",
+            url: "https://u-pham.notion.site/cccccccccccccccccccccccccccccccc",
           },
         ],
       },

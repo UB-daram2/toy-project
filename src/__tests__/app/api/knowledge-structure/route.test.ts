@@ -27,7 +27,7 @@ const mockSections = [
       {
         id: "upharm-system",
         title: "유팜시스템",
-        links: [{ id: "link-1", title: "처방조제", url: "https://www.notion.so/xxx" }],
+        links: [{ id: "link-1", title: "처방조제", url: "https://u-pham.notion.site/xxx" }],
       },
     ],
   },

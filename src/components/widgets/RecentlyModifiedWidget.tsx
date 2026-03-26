@@ -8,6 +8,7 @@
 import { Clock } from "lucide-react";
 import type { KnowledgeSection, KnowledgeLink } from "@/data/knowledge-base";
 import { WidgetCard } from "./WidgetCard";
+import { WidgetEmptyState } from "./WidgetFeedback";
 
 /** Unix ms 타임스탬프를 한국어 상대 시간으로 변환한다 */
 function formatRelativeTime(timestamp: number): string {
@@ -42,9 +43,7 @@ export function RecentlyModifiedWidget({ sections, onOpenModal }: RecentlyModifi
       accentGradient="from-blue-500 to-blue-600"
     >
       {topLinks.length === 0 ? (
-        <p className="text-center text-xs text-gray-400 dark:text-zinc-500">
-          수정 데이터가 없습니다
-        </p>
+        <WidgetEmptyState message="수정 데이터가 없습니다" />
       ) : (
         <ul className="flex flex-col gap-2">
           {topLinks.map((link, i) => (

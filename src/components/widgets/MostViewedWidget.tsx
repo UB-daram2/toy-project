@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { TrendingUp } from "lucide-react";
 import { getTopViewed } from "@/lib/view-tracker";
 import { WidgetCard } from "./WidgetCard";
+import { WidgetEmptyState } from "./WidgetFeedback";
 
 interface MostViewedWidgetProps {
   onOpenModal: (url: string, title: string) => void;
@@ -34,9 +35,7 @@ export function MostViewedWidget({ onOpenModal }: MostViewedWidgetProps) {
       accentGradient="from-violet-500 to-purple-600"
     >
       {topViewed.length === 0 ? (
-        <p className="text-center text-xs text-gray-400 dark:text-zinc-500">
-          아직 열람 기록이 없습니다
-        </p>
+        <WidgetEmptyState message="아직 열람 기록이 없습니다" />
       ) : (
         <ul className="flex flex-col gap-2">
           {topViewed.map((item, i) => (

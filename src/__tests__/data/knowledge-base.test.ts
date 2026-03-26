@@ -22,15 +22,15 @@ const sampleSections: KnowledgeSection[] = [
         id: "cat-1",
         title: "카테고리 1",
         links: [
-          { id: "link-1", title: "처방조제", url: "https://notion.so/1" },
-          { id: "link-2", title: "보험청구", url: "https://notion.so/2" },
+          { id: "link-1", title: "처방조제", url: "https://u-pham.notion.site/1" },
+          { id: "link-2", title: "보험청구", url: "https://u-pham.notion.site/2" },
         ],
       },
       {
         id: "cat-2",
         title: "카테고리 2",
         links: [
-          { id: "link-3", title: "재고관리", url: "https://notion.so/3" },
+          { id: "link-3", title: "재고관리", url: "https://u-pham.notion.site/3" },
         ],
       },
     ],
@@ -46,7 +46,7 @@ const sampleSections: KnowledgeSection[] = [
         id: "cat-3",
         title: "VAN Plus",
         links: [
-          { id: "link-4", title: "VAN Plus 사용법", url: "https://notion.so/4" },
+          { id: "link-4", title: "VAN Plus 사용법", url: "https://u-pham.notion.site/4" },
         ],
       },
     ],
@@ -75,7 +75,7 @@ describe("countTotalLinks (전체 링크 수 계산)", () => {
           {
             id: "c2",
             title: "카테고리",
-            links: [{ id: "l1", title: "링크", url: "https://notion.so/x" }],
+            links: [{ id: "l1", title: "링크", url: "https://u-pham.notion.site/x" }],
           },
         ],
       },

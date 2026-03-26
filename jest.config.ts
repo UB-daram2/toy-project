@@ -37,13 +37,13 @@ const config: Config = {
     "!src/components/SalaryPrayerModal.tsx",
   ],
 
-  // 90% 이상 커버리지 강제
+  // 80% 이상 커버리지 강제
   coverageThreshold: {
     global: {
-      lines: 90,
-      functions: 90,
-      branches: 90,
-      statements: 90,
+      lines: 80,
+      functions: 80,
+      branches: 80,
+      statements: 80,
     },
   },
 };

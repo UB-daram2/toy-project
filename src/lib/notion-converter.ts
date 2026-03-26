@@ -143,14 +143,18 @@ export function convertBlock(id: string, blockValue: NotionBlockValue): Converte
       };
       break;
     case "image": {
-      // display_source(외부 이미지) 또는 source(업로드 이미지)에서 URL 추출
-      const imageUrl: string =
-        format?.display_source ?? properties?.source?.[0]?.[0] ?? "";
-      block[officialType] = imageUrl
-        ? format?.display_source
-          ? { external: { url: imageUrl } }
-          : { file: { url: imageUrl } }
-        : {};
+      // display_source 또는 properties.source에서 이미지 URL을 추출한다
+      const imageUrl = format?.display_source ?? properties?.source?.[0]?.[0] ?? "";
+      // Notion 업로드 이미지(S3 URL, attachment: 프로토콜)는 인증이 필요하므로 signed URL로 교체해야 한다
+      const needsSigning = imageUrl.includes("secure.s3") || imageUrl.includes("s3.amazonaws.com") || imageUrl.startsWith("attachment:");
+      if (!imageUrl) {
+        block[officialType] = {};
+      } else if (needsSigning) {
+        // source 필드를 보존하여 route handler에서 signed URL로 교체한다
+        block[officialType] = { type: "file", file: { url: imageUrl }, source: imageUrl };
+      } else {
+        block[officialType] = { type: "external", external: { url: imageUrl } };
+      }
       break;
     }
     case "file":

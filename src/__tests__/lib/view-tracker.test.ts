@@ -14,25 +14,25 @@ beforeEach(() => {
 
 describe("recordPageView (열람 수 기록)", () => {
   it("새 페이지를 처음 열람하면 count가 1이 된다", () => {
-    recordPageView("page-a", "제목A", "https://notion.so/page-a");
+    recordPageView("page-a", "제목A", "https://u-pham.notion.site/page-a");
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}");
     expect(raw["page-a"].count).toBe(1);
     expect(raw["page-a"].title).toBe("제목A");
-    expect(raw["page-a"].url).toBe("https://notion.so/page-a");
+    expect(raw["page-a"].url).toBe("https://u-pham.notion.site/page-a");
   });
 
   it("같은 페이지를 여러 번 열람하면 count가 누적된다", () => {
-    recordPageView("page-a", "제목A", "https://notion.so/page-a");
-    recordPageView("page-a", "제목A", "https://notion.so/page-a");
-    recordPageView("page-a", "제목A", "https://notion.so/page-a");
+    recordPageView("page-a", "제목A", "https://u-pham.notion.site/page-a");
+    recordPageView("page-a", "제목A", "https://u-pham.notion.site/page-a");
+    recordPageView("page-a", "제목A", "https://u-pham.notion.site/page-a");
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}");
     expect(raw["page-a"].count).toBe(3);
   });
 
   it("다른 페이지 열람은 서로 독립적으로 기록된다", () => {
-    recordPageView("page-a", "제목A", "https://notion.so/page-a");
-    recordPageView("page-b", "제목B", "https://notion.so/page-b");
-    recordPageView("page-a", "제목A", "https://notion.so/page-a");
+    recordPageView("page-a", "제목A", "https://u-pham.notion.site/page-a");
+    recordPageView("page-b", "제목B", "https://u-pham.notion.site/page-b");
+    recordPageView("page-a", "제목A", "https://u-pham.notion.site/page-a");
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}");
     expect(raw["page-a"].count).toBe(2);
     expect(raw["page-b"].count).toBe(1);
@@ -50,7 +50,7 @@ describe("recordPageView (열람 수 기록)", () => {
   it("localStorage가 손상된 상태에서도 오류 없이 기록한다", () => {
     localStorage.setItem(STORAGE_KEY, "invalid json {{{");
     expect(() =>
-      recordPageView("page-a", "제목A", "https://notion.so/page-a")
+      recordPageView("page-a", "제목A", "https://u-pham.notion.site/page-a")
     ).not.toThrow();
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}");
     expect(raw["page-a"].count).toBe(1);
@@ -63,12 +63,12 @@ describe("getTopViewed (열람 상위 항목 조회)", () => {
   });
 
   it("열람 수 내림차순으로 정렬하여 반환한다", () => {
-    recordPageView("page-a", "제목A", "https://notion.so/a");
-    recordPageView("page-b", "제목B", "https://notion.so/b");
-    recordPageView("page-b", "제목B", "https://notion.so/b");
-    recordPageView("page-b", "제목B", "https://notion.so/b");
-    recordPageView("page-c", "제목C", "https://notion.so/c");
-    recordPageView("page-c", "제목C", "https://notion.so/c");
+    recordPageView("page-a", "제목A", "https://u-pham.notion.site/a");
+    recordPageView("page-b", "제목B", "https://u-pham.notion.site/b");
+    recordPageView("page-b", "제목B", "https://u-pham.notion.site/b");
+    recordPageView("page-b", "제목B", "https://u-pham.notion.site/b");
+    recordPageView("page-c", "제목C", "https://u-pham.notion.site/c");
+    recordPageView("page-c", "제목C", "https://u-pham.notion.site/c");
 
     const result = getTopViewed(3);
     expect(result[0].pageId).toBe("page-b");
@@ -81,25 +81,25 @@ describe("getTopViewed (열람 상위 항목 조회)", () => {
 
   it("limit 개수만큼만 반환한다", () => {
     for (let i = 0; i < 10; i++) {
-      recordPageView(`page-${i}`, `제목${i}`, `https://notion.so/${i}`);
+      recordPageView(`page-${i}`, `제목${i}`, `https://u-pham.notion.site/${i}`);
     }
     expect(getTopViewed(5)).toHaveLength(5);
     expect(getTopViewed(3)).toHaveLength(3);
   });
 
   it("전체 기록이 limit보다 적으면 있는 만큼만 반환한다", () => {
-    recordPageView("page-a", "제목A", "https://notion.so/a");
-    recordPageView("page-b", "제목B", "https://notion.so/b");
+    recordPageView("page-a", "제목A", "https://u-pham.notion.site/a");
+    recordPageView("page-b", "제목B", "https://u-pham.notion.site/b");
     expect(getTopViewed(10)).toHaveLength(2);
   });
 
   it("반환 항목에 pageId, title, url, count가 모두 포함된다", () => {
-    recordPageView("page-a", "제목A", "https://notion.so/a");
+    recordPageView("page-a", "제목A", "https://u-pham.notion.site/a");
     const result = getTopViewed(1);
     expect(result[0]).toMatchObject({
       pageId: "page-a",
       title: "제목A",
-      url: "https://notion.so/a",
+      url: "https://u-pham.notion.site/a",
       count: 1,
     });
   });

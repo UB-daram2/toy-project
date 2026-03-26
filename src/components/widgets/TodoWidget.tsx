@@ -11,6 +11,7 @@ import { ListTodo, Plus, Trash2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTodoStore } from "@/stores/todoStore";
 import { WidgetCard } from "./WidgetCard";
+import { WidgetEmptyState } from "./WidgetFeedback";
 
 export function TodoWidget() {
   // 투두 상태는 Zustand 스토어가 관리한다 (persist 미들웨어로 localStorage 자동 영속화)
@@ -63,9 +64,7 @@ export function TodoWidget() {
 
       {/* 투두 목록 */}
       {todos.length === 0 ? (
-        <p className="text-center text-xs text-gray-400 dark:text-zinc-500">
-          할 일이 없습니다
-        </p>
+        <WidgetEmptyState message="할 일이 없습니다" />
       ) : (
         <ul className="flex max-h-44 flex-col gap-1.5 overflow-y-auto">
           {todos.map((todo) => (

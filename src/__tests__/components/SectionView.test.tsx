@@ -17,15 +17,15 @@ const sampleSection: KnowledgeSection = {
       id: "cat-1",
       title: "처방조제",
       links: [
-        { id: "l1", title: "처방조제 가이드", url: "https://notion.so/1" },
+        { id: "l1", title: "처방조제 가이드", url: "https://u-pham.notion.site/1" },
       ],
     },
     {
       id: "cat-2",
       title: "보험청구",
       links: [
-        { id: "l2", title: "보험청구 가이드", url: "https://notion.so/2" },
-        { id: "l3", title: "보험청구 오류", url: "https://notion.so/3" },
+        { id: "l2", title: "보험청구 가이드", url: "https://u-pham.notion.site/2" },
+        { id: "l3", title: "보험청구 오류", url: "https://u-pham.notion.site/3" },
       ],
     },
   ],

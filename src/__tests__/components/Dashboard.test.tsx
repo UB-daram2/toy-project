@@ -17,7 +17,7 @@ jest.mock("next-themes", () => ({
 // useKnowledgeStructure 훅 모킹
 jest.mock("@/hooks/useKnowledgeStructure", () => ({
   useKnowledgeStructure: jest.fn(),
-  NOTION_ROOT_URL: "https://www.notion.so/test",
+  NOTION_ROOT_URL: "https://u-pham.notion.site/test",
 }));
 
 import { useKnowledgeStructure } from "@/hooks/useKnowledgeStructure";
@@ -38,7 +38,7 @@ const mockSections = [
           {
             id: "prescription-link",
             title: "처방조제",
-            url: "https://www.notion.so/xxx",
+            url: "https://u-pham.notion.site/xxx",
           },
         ],
       },
@@ -58,7 +58,7 @@ const mockSections = [
           {
             id: "usage-link",
             title: "사용법",
-            url: "https://www.notion.so/yyy",
+            url: "https://u-pham.notion.site/yyy",
           },
         ],
       },
@@ -78,7 +78,7 @@ const mockSections = [
           {
             id: "file-link",
             title: "파일",
-            url: "https://www.notion.so/zzz",
+            url: "https://u-pham.notion.site/zzz",
           },
         ],
       },
@@ -218,21 +218,6 @@ describe("Dashboard", () => {
       { target: { value: "처방" } }
     );
     expect(screen.getByText("(검색 결과)")).toBeInTheDocument();
-  });
-
-  it("cached 상태일 때 홈 탭에서 캐시 배너와 위젯을 함께 표시한다", () => {
-    (useKnowledgeStructure as jest.Mock).mockReturnValue({
-      sections: mockSections,
-      status: "cached",
-      retryAttempt: 0,
-      maxRetries: 2,
-      retry: jest.fn(),
-    });
-    render(<Dashboard />);
-    expect(screen.getByText("저장된 데이터를 사용 중입니다")).toBeInTheDocument();
-    expect(
-      screen.getAllByRole("heading", { name: /유팜 기술지원 포털/ }).length
-    ).toBeGreaterThan(0);
   });
 
   it("총 문서 수를 홈 히어로에 표시한다", () => {

@@ -18,8 +18,8 @@ const sampleSections: KnowledgeSection[] = [
         id: "cat-1",
         title: "카테고리 1",
         links: [
-          { id: "l1", title: "링크1", url: "https://notion.so/1" },
-          { id: "l2", title: "링크2", url: "https://notion.so/2" },
+          { id: "l1", title: "링크1", url: "https://u-pham.notion.site/1" },
+          { id: "l2", title: "링크2", url: "https://u-pham.notion.site/2" },
         ],
       },
     ],
@@ -34,7 +34,7 @@ const sampleSections: KnowledgeSection[] = [
       {
         id: "cat-2",
         title: "카테고리 2",
-        links: [{ id: "l3", title: "링크3", url: "https://notion.so/3" }],
+        links: [{ id: "l3", title: "링크3", url: "https://u-pham.notion.site/3" }],
       },
     ],
   },

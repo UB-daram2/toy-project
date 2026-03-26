@@ -11,6 +11,7 @@ import { Flag, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDDayStore } from "@/stores/ddayStore";
 import { WidgetCard } from "./WidgetCard";
+import { WidgetEmptyState, FormActionButtons } from "./WidgetFeedback";
 
 /** 목표 날짜까지 남은 일수를 계산한다 (양수=미래, 0=당일, 음수=과거) */
 function calcDDay(targetDate: string): number {
@@ -42,9 +43,7 @@ export function DDayWidget() {
     >
       {/* D-Day 목록 */}
       {ddays.length === 0 && !isAdding && (
-        <p className="text-center text-xs text-gray-400 dark:text-zinc-500">
-          D-Day가 없습니다
-        </p>
+        <WidgetEmptyState message="D-Day가 없습니다" />
       )}
       {ddays.length > 0 && (
         <ul className="mb-2 flex flex-col gap-1.5">
@@ -97,20 +96,11 @@ export function DDayWidget() {
             onChange={(e) => setNewDate(e.target.value)}
             className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-900 outline-none focus:border-pink-300 focus:ring-1 focus:ring-pink-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
           />
-          <div className="flex gap-2">
-            <button
-              onClick={addDDay}
-              className="flex-1 rounded-lg bg-pink-500 py-1.5 text-xs font-medium text-white hover:bg-pink-600"
-            >
-              추가
-            </button>
-            <button
-              onClick={() => { setIsAdding(false); setNewTitle(""); setNewDate(""); }}
-              className="flex-1 rounded-lg border border-gray-200 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-zinc-700 dark:text-zinc-400"
-            >
-              취소
-            </button>
-          </div>
+          <FormActionButtons
+            onConfirm={addDDay}
+            onCancel={() => { setIsAdding(false); setNewTitle(""); setNewDate(""); }}
+            confirmColor="bg-pink-500 hover:bg-pink-600"
+          />
         </div>
       ) : (
         <button

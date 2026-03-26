@@ -2,7 +2,7 @@
 
 /**
  * 홈 대시보드 뷰 컴포넌트
- * 위젯 14종을 DnD로 재정렬 가능한 그리드로 표시한다.
+ * 위젯 12종을 DnD로 재정렬 가능한 그리드로 표시한다.
  * 각 위젯은 src/components/widgets/ 하위 개별 파일로 분리되어 있다.
  *
  * DnD 이중 구현:
@@ -10,8 +10,9 @@
  *   - 터치: Pointer Events API + setPointerCapture (HTML5 DnD는 터치에서 불안정)
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useState } from "react";
 import { useIMEInput } from "@/hooks/useIMEInput";
+import { useEasterEgg } from "@/hooks/useEasterEgg";
 import { useDragDropWidgets } from "@/hooks/useDragDropWidgets";
 import { GripVertical, Search, X } from "lucide-react";
 import { SalaryPrayerModal } from "./SalaryPrayerModal";
@@ -25,8 +26,6 @@ import {
   RecentlyModifiedWidget,
   MostViewedWidget,
   WeatherWidget,
-  ExchangeRateWidget,
-  StockWidget,
   MemoWidget,
   CalendarWidget,
   DDayWidget,
@@ -84,23 +83,7 @@ export function HomeView({
   });
 
   // 🙏 이스터에그: 포털 타이틀 5번 빠르게 클릭 시 월급 기도 모달 등장
-  const eggClickCountRef = useRef(0);
-  const eggTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showSalaryPrayer, setShowSalaryPrayer] = useState(false);
-  /* istanbul ignore next -- 이스터에그 로직, 테스트 불필요 */
-  const handleTitleClick = useCallback(() => {
-    eggClickCountRef.current += 1;
-    if (eggTimerRef.current) clearTimeout(eggTimerRef.current);
-    if (eggClickCountRef.current >= 5) {
-      eggClickCountRef.current = 0;
-      setShowSalaryPrayer(true);
-    } else {
-      // 800ms 이내 추가 클릭이 없으면 카운터 리셋
-      eggTimerRef.current = setTimeout(() => {
-        eggClickCountRef.current = 0;
-      }, 800);
-    }
-  }, []);
+  const { show: showSalaryPrayer, handleClick: handleTitleClick, close: closeSalaryPrayer } = useEasterEgg();
 
   // 위젯 순서 — Zustand 스토어에서 가져온다 (persist 미들웨어로 localStorage 자동 영속화)
   const { widgetOrder } = useWidgetStore();
@@ -135,8 +118,6 @@ export function HomeView({
       case "recent":         return <RecentlyModifiedWidget sections={sections} onOpenModal={openModal} />;
       case "popular":        return <MostViewedWidget onOpenModal={openModal} />;
       case "weather":        return <WeatherWidget />;
-      case "exchange":       return <ExchangeRateWidget />;
-      case "market":         return <StockWidget />;
       case "memo":           return <MemoWidget />;
       case "calendar":       return <CalendarWidget />;
       case "dday":           return <DDayWidget />;
@@ -156,7 +137,7 @@ export function HomeView({
     <div className="flex flex-col gap-6">
       {/* 🙏 월급 기도 이스터에그 모달 */}
       {showSalaryPrayer && (
-        <SalaryPrayerModal onClose={() => setShowSalaryPrayer(false)} />
+        <SalaryPrayerModal onClose={closeSalaryPrayer} />
       )}
       {/* 히어로 섹션 — 홈 히어로 vs 기존 그라데이션 배너 */}
       {onSearchChange !== undefined ? (

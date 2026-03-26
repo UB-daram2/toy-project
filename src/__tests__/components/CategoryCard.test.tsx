@@ -25,8 +25,8 @@ const sampleCategory: KnowledgeCategory = {
   id: "cat-1",
   title: "처방조제",
   links: [
-    { id: "link-1", title: "처방조제 방법", url: "https://notion.so/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
-    { id: "link-2", title: "처방점검 방법", url: "https://notion.so/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
+    { id: "link-1", title: "처방조제 방법", url: "https://u-pham.notion.site/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+    { id: "link-2", title: "처방점검 방법", url: "https://u-pham.notion.site/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
   ],
 };
 
@@ -121,7 +121,7 @@ describe("CategoryCard — 더 보기 / 접기", () => {
     links: Array.from({ length: 7 }, (_, i) => ({
       id: `link-${i}`,
       title: `링크${i + 1}`,
-      url: `https://notion.so/${"a".repeat(31)}${i}`,
+      url: `https://u-pham.notion.site/${"a".repeat(31)}${i}`,
     })),
   };
 

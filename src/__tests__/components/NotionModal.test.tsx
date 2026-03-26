@@ -1,701 +1,259 @@
 /**
  * NotionModal 컴포넌트 테스트
+ * 모달 라이프사이클, 블록 렌더링, 서브페이지 네비게이션을 검증한다.
  */
 
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { NotionModal } from "@/components/NotionModal";
 
-const TEST_URL = "https://www.notion.so/87e1f915cdf083ca827e812ef3a5a3e0";
+const TEST_URL = "https://u-pham.notion.site/aabbccdd11223344aabbccdd11223344";
 const TEST_TITLE = "처방조제";
 
-// fetch 모킹
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-/** 성공 응답을 반환하는 fetch 모킹 헬퍼 */
+/** 성공 응답 모킹 헬퍼 */
 function mockFetchSuccess(blocks: object[]) {
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({ blocks }),
-  });
+  mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ blocks }) });
 }
 
-/** 에러 응답을 반환하는 fetch 모킹 헬퍼 */
+/** 에러 응답 모킹 헬퍼 */
 function mockFetchError(errorMessage: string) {
-  mockFetch.mockResolvedValueOnce({
-    ok: false,
-    json: async () => ({ error: errorMessage }),
-  });
+  mockFetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: errorMessage }) });
+}
+
+/** rich_text 항목 생성 헬퍼 */
+function rt(text: string, opts: { bold?: boolean; italic?: boolean; strikethrough?: boolean; underline?: boolean; code?: boolean; href?: string | null } = {}) {
+  return {
+    plain_text: text,
+    href: opts.href ?? null,
+    annotations: {
+      bold: opts.bold ?? false,
+      italic: opts.italic ?? false,
+      strikethrough: opts.strikethrough ?? false,
+      underline: opts.underline ?? false,
+      code: opts.code ?? false,
+    },
+  };
 }
 
 describe("NotionModal", () => {
-  beforeEach(() => {
-    mockFetch.mockClear();
-  });
+  beforeEach(() => mockFetch.mockClear());
 
-  it("로딩 중 스피너와 텍스트를 표시한다", () => {
-    // fetch가 완료되기 전 상태를 테스트하기 위해 pending Promise 사용
+  // ── 모달 라이프사이클 ──
+
+  it("로딩 중 스피너를 표시하고, 제목과 Notion 링크가 올바르다", () => {
     mockFetch.mockReturnValueOnce(new Promise(() => {}));
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
     expect(screen.getByText("불러오는 중...")).toBeInTheDocument();
-  });
-
-  it("페이지 제목을 헤더에 표시한다", () => {
-    mockFetch.mockReturnValueOnce(new Promise(() => {}));
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
     expect(screen.getByText(TEST_TITLE)).toBeInTheDocument();
-  });
-
-  it("'Notion에서 열기' 링크가 올바른 href를 가진다", () => {
-    mockFetch.mockReturnValueOnce(new Promise(() => {}));
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
     const link = screen.getByText("Notion에서 열기").closest("a");
     expect(link).toHaveAttribute("href", TEST_URL);
     expect(link).toHaveAttribute("target", "_blank");
   });
 
-  it("블록 로딩 후 paragraph 블록을 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-1",
-        type: "paragraph",
-        paragraph: {
-          rich_text: [
-            {
-              plain_text: "테스트 내용입니다.",
-              href: null,
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false },
-            },
-          ],
-        },
-      },
-    ]);
-
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("테스트 내용입니다.")).toBeInTheDocument();
-    });
-  });
-
-  it("heading_2 블록을 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-h2",
-        type: "heading_2",
-        heading_2: {
-          rich_text: [
-            {
-              plain_text: "섹션 제목",
-              href: null,
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false },
-            },
-          ],
-        },
-      },
-    ]);
-
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("섹션 제목")).toBeInTheDocument();
-    });
-  });
-
-  it("API 오류 시 에러 메시지를 표시한다", async () => {
-    mockFetchError("페이지를 불러오지 못했습니다: Not found");
-
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(/페이지를 불러오지 못했습니다/)
-      ).toBeInTheDocument();
-    });
-  });
-
-  it("fetch 예외 발생 시 에러 메시지를 표시한다", async () => {
-    mockFetch.mockRejectedValueOnce(new Error("Network error"));
-
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("Network error")).toBeInTheDocument();
-    });
-  });
-
-  it("블록이 없으면 Notion 링크 유도 메시지와 버튼을 표시한다", async () => {
-    mockFetchSuccess([]);
-
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("이 페이지는 Notion에서 직접 확인해 주세요.")).toBeInTheDocument();
-    });
-    // 빈 콘텐츠 영역의 Notion 열기 링크 (헤더 버튼과 별개)
-    const notionLinks = screen.getAllByRole("link", { name: /Notion에서 열기/ });
-    expect(notionLinks.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("닫기 버튼 클릭 시 onClose가 호출된다", () => {
+  it("닫기 버튼/배경 클릭/ESC 키로 모달을 닫는다", () => {
+    // 닫기 버튼
     mockFetch.mockReturnValueOnce(new Promise(() => {}));
     const onClose = jest.fn();
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={onClose} />
-    );
+    const { unmount: u1 } = render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={onClose} />);
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
     expect(onClose).toHaveBeenCalledTimes(1);
-  });
+    u1();
 
-  it("배경 클릭 시 onClose가 호출된다", () => {
+    // 배경 클릭
     mockFetch.mockReturnValueOnce(new Promise(() => {}));
-    const onClose = jest.fn();
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={onClose} />
-    );
-    // role="dialog" 부모 div(배경) 클릭
+    const onClose2 = jest.fn();
+    const { unmount: u2 } = render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={onClose2} />);
     fireEvent.click(screen.getByRole("dialog", { name: TEST_TITLE }));
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
+    expect(onClose2).toHaveBeenCalledTimes(1);
+    u2();
 
-  it("ESC 키 입력 시 onClose가 호출된다", () => {
+    // ESC 키
     mockFetch.mockReturnValueOnce(new Promise(() => {}));
-    const onClose = jest.fn();
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={onClose} />
-    );
+    const onClose3 = jest.fn();
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={onClose3} />);
     fireEvent.keyDown(document, { key: "Escape" });
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onClose3).toHaveBeenCalledTimes(1);
   });
 
   it("올바르지 않은 URL이면 에러 메시지를 표시한다", () => {
-    render(
-      <NotionModal
-        pageUrl="https://invalid-url.com"
-        pageTitle={TEST_TITLE}
-        onClose={() => {}}
-      />
-    );
+    render(<NotionModal pageUrl="https://invalid-url.com" pageTitle={TEST_TITLE} onClose={() => {}} />);
     expect(screen.getByText("올바르지 않은 페이지 URL입니다.")).toBeInTheDocument();
   });
 
-  it("bulleted_list_item 블록을 렌더링한다", async () => {
+  // ── 에러 처리 ──
+
+  it("API 오류/fetch 예외/Unknown error/비Error 예외를 처리한다", async () => {
+    // API 에러 응답
+    mockFetchError("페이지를 불러오지 못했습니다: Not found");
+    const { unmount: u1 } = render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByText(/페이지를 불러오지 못했습니다/)).toBeInTheDocument());
+    u1();
+
+    // fetch 예외
+    mockFetch.mockRejectedValueOnce(new Error("Network error"));
+    const { unmount: u2 } = render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByText("Network error")).toBeInTheDocument());
+    u2();
+
+    // error 필드 없는 응답
+    mockFetch.mockResolvedValueOnce({ ok: false, json: async () => ({}) });
+    const { unmount: u3 } = render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByText(/Unknown error/)).toBeInTheDocument());
+    u3();
+
+    // 비Error 인스턴스 예외
+    mockFetch.mockRejectedValueOnce("string error");
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByText("페이지를 불러오지 못했습니다.")).toBeInTheDocument());
+  });
+
+  it("429 에러 시 안내 메시지·다시 시도·Notion 링크를 표시한다", async () => {
+    mockFetchError("Notion API 오류: 429");
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+    await waitFor(() => {
+      expect(screen.getByText(/429/)).toBeInTheDocument();
+      expect(screen.getByText("일시적으로 차단되었습니다", { exact: false })).toBeInTheDocument();
+      expect(screen.getByText("다시 시도")).toBeInTheDocument();
+      // 에러 영역 내 Notion 링크 (헤더와 별도)
+      const notionLinks = screen.getAllByText("Notion에서 열기");
+      expect(notionLinks.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  it("에러 상태에서 다시 시도 클릭 시 재요청한다", async () => {
+    mockFetchError("Notion API 오류: 502");
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByText("다시 시도")).toBeInTheDocument());
+
+    // 재시도 시 성공 응답
+    mockFetchSuccess([{ id: "p1", type: "paragraph", paragraph: { rich_text: [rt("재시도 성공")] } }]);
+    fireEvent.click(screen.getByText("다시 시도"));
+    await waitFor(() => expect(screen.getByText("재시도 성공")).toBeInTheDocument());
+  });
+
+  // ── 블록 렌더링 ──
+
+  it("다양한 블록 타입을 렌더링한다 (paragraph, heading, list, todo, quote, code, callout, divider, toggle)", async () => {
     mockFetchSuccess([
-      {
-        id: "block-li",
-        type: "bulleted_list_item",
-        bulleted_list_item: {
-          rich_text: [
-            {
-              plain_text: "목록 항목",
-              href: null,
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false },
-            },
-          ],
-        },
-      },
+      { id: "p1", type: "paragraph", paragraph: { rich_text: [rt("본문 텍스트")] } },
+      { id: "h1", type: "heading_1", heading_1: { rich_text: [rt("대제목")] } },
+      { id: "h2", type: "heading_2", heading_2: { rich_text: [rt("중제목")] } },
+      { id: "h3", type: "heading_3", heading_3: { rich_text: [rt("소제목")] } },
+      { id: "bl", type: "bulleted_list_item", bulleted_list_item: { rich_text: [rt("목록 항목")] } },
+      { id: "nl", type: "numbered_list_item", numbered_list_item: { rich_text: [rt("순서 항목")] } },
+      { id: "td", type: "to_do", to_do: { rich_text: [rt("할 일")], checked: true } },
+      { id: "qt", type: "quote", quote: { rich_text: [rt("인용구 내용")] } },
+      { id: "co", type: "code", code: { rich_text: [rt("console.log('hello')")], language: "javascript" } },
+      { id: "cl", type: "callout", callout: { rich_text: [rt("중요 안내")], icon: { emoji: "💡" } } },
+      { id: "dv", type: "divider", divider: {} },
+      { id: "tg", type: "toggle", toggle: { rich_text: [rt("토글 제목")] } },
     ]);
 
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
+    const { container } = render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
 
     await waitFor(() => {
+      expect(screen.getByText("본문 텍스트")).toBeInTheDocument();
+      expect(screen.getByText("대제목")).toBeInTheDocument();
+      expect(screen.getByText("중제목")).toBeInTheDocument();
+      expect(screen.getByText("소제목")).toBeInTheDocument();
       expect(screen.getByText("목록 항목")).toBeInTheDocument();
-    });
-  });
-
-  it("divider 블록을 렌더링한다", async () => {
-    mockFetchSuccess([
-      { id: "block-div", type: "divider", divider: {} },
-    ]);
-
-    const { container } = render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      expect(container.querySelector("hr")).toBeInTheDocument();
-    });
-  });
-
-  it("완전히 알 수 없는 블록 타입은 렌더링을 생략하고 오류 없이 처리한다", async () => {
-    // 내용 있는 블록(hasVisibleContent=true) + 완전히 미지원 블록 타입 → default: return null 커버
-    mockFetchSuccess([
-      {
-        id: "block-para",
-        type: "paragraph",
-        paragraph: { rich_text: [{ plain_text: "내용", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }] },
-      },
-      { id: "block-xyz", type: "unknown_xyz", unknown_xyz: {} },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-
-    await waitFor(() => {
-      // 알려진 블록은 렌더링되고, 미지원 블록은 조용히 생략된다
-      expect(screen.getByText("내용")).toBeInTheDocument();
-    });
-  });
-
-  it("지원하지 않는 블록 타입은 렌더링을 생략한다", async () => {
-    mockFetchSuccess([
-      { id: "block-unknown", type: "child_page", child_page: { title: "서브페이지" } },
-    ]);
-
-    const { container } = render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      expect(container.querySelector("[role='dialog']")).toBeInTheDocument();
-    });
-  });
-
-  it("bold 어노테이션이 적용된 rich text를 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-bold",
-        type: "paragraph",
-        paragraph: {
-          rich_text: [
-            {
-              plain_text: "굵은 텍스트",
-              href: null,
-              annotations: { bold: true, italic: false, strikethrough: false, underline: false, code: false },
-            },
-          ],
-        },
-      },
-    ]);
-
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      const el = screen.getByText("굵은 텍스트");
-      expect(el).toHaveClass("font-semibold");
-    });
-  });
-
-  it("href가 있는 rich text를 링크로 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-link",
-        type: "paragraph",
-        paragraph: {
-          rich_text: [
-            {
-              plain_text: "링크 텍스트",
-              href: "https://example.com",
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false },
-            },
-          ],
-        },
-      },
-    ]);
-
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      const link = screen.getByText("링크 텍스트").closest("a");
-      expect(link).toHaveAttribute("href", "https://example.com");
-    });
-  });
-
-  it("code 어노테이션이 적용된 rich text를 인라인 코드로 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-code-inline",
-        type: "paragraph",
-        paragraph: {
-          rich_text: [
-            {
-              plain_text: "코드조각",
-              href: null,
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: true },
-            },
-          ],
-        },
-      },
-    ]);
-
-    render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      const codeEl = screen.getByText("코드조각");
-      expect(codeEl.tagName).toBe("CODE");
-    });
-  });
-
-  it("heading_1 블록을 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-h1",
-        type: "heading_1",
-        heading_1: {
-          rich_text: [{ plain_text: "대제목", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }],
-        },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-    await waitFor(() => expect(screen.getByText("대제목")).toBeInTheDocument());
-  });
-
-  it("heading_3 블록을 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-h3",
-        type: "heading_3",
-        heading_3: {
-          rich_text: [{ plain_text: "소제목", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }],
-        },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-    await waitFor(() => expect(screen.getByText("소제목")).toBeInTheDocument());
-  });
-
-  it("numbered_list_item 블록을 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-nl",
-        type: "numbered_list_item",
-        numbered_list_item: {
-          rich_text: [{ plain_text: "순서 항목", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }],
-        },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-    await waitFor(() => expect(screen.getByText("순서 항목")).toBeInTheDocument());
-  });
-
-  it("to_do 블록을 체크박스로 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-todo",
-        type: "to_do",
-        to_do: {
-          rich_text: [{ plain_text: "할 일", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }],
-          checked: true,
-        },
-      },
-    ]);
-
-    const { container } = render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
+      expect(screen.getByText("순서 항목")).toBeInTheDocument();
       expect(screen.getByText("할 일")).toBeInTheDocument();
       expect(container.querySelector("input[type='checkbox']")).toBeChecked();
-    });
-  });
-
-  it("quote 블록을 인용구로 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-quote",
-        type: "quote",
-        quote: {
-          rich_text: [{ plain_text: "인용구 내용", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }],
-        },
-      },
-    ]);
-
-    const { container } = render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
       expect(container.querySelector("blockquote")).toBeInTheDocument();
       expect(screen.getByText("인용구 내용")).toBeInTheDocument();
-    });
-  });
-
-  it("code 블록을 pre/code로 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-code",
-        type: "code",
-        code: {
-          rich_text: [{ plain_text: "console.log('hello')", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }],
-          language: "javascript",
-        },
-      },
-    ]);
-
-    const { container } = render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
       expect(container.querySelector("pre")).toBeInTheDocument();
-      expect(screen.getByText("console.log('hello')")).toBeInTheDocument();
-    });
-  });
-
-  it("callout 블록을 이모지와 함께 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-callout",
-        type: "callout",
-        callout: {
-          rich_text: [{ plain_text: "중요 안내", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }],
-          icon: { emoji: "💡" },
-        },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-    await waitFor(() => {
       expect(screen.getByText("💡")).toBeInTheDocument();
-      expect(screen.getByText("중요 안내")).toBeInTheDocument();
+      expect(container.querySelector("hr")).toBeInTheDocument();
+      expect(container.querySelector("details")).toBeInTheDocument();
+      expect(screen.getByText("토글 제목")).toBeInTheDocument();
     });
   });
 
-  it("image 블록(external)을 img 태그로 렌더링한다", async () => {
+  it("rich text 어노테이션(bold/italic/strikethrough/underline/code/link)을 렌더링한다", async () => {
     mockFetchSuccess([
-      {
-        id: "block-img",
-        type: "image",
-        image: {
-          type: "external",
-          external: { url: "https://example.com/image.png" },
-        },
-      },
-    ]);
-
-    const { container } = render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      const img = container.querySelector("img");
-      expect(img).toBeInTheDocument();
-      expect(img).toHaveAttribute("src", "https://example.com/image.png");
-    });
-  });
-
-  it("paragraph에 rich_text가 비어있으면 br 태그를 렌더링한다", async () => {
-    // 내용 있는 블록과 빈 블록이 함께 있을 때, 빈 단락은 br로 렌더링된다
-    mockFetchSuccess([
-      {
-        id: "block-with-text",
-        type: "paragraph",
-        paragraph: { rich_text: [{ plain_text: "내용", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }] },
-      },
-      {
-        id: "block-empty-para",
-        type: "paragraph",
-        paragraph: { rich_text: [] },
-      },
-    ]);
-
-    const { container } = render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      expect(container.querySelector("br")).toBeInTheDocument();
-    });
-  });
-
-  it("italic 어노테이션이 적용된 rich text를 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-italic",
-        type: "paragraph",
-        paragraph: {
-          rich_text: [
-            {
-              plain_text: "기울임 텍스트",
-              href: null,
-              annotations: { bold: false, italic: true, strikethrough: false, underline: false, code: false },
-            },
-          ],
-        },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-    await waitFor(() => {
-      expect(screen.getByText("기울임 텍스트")).toHaveClass("italic");
-    });
-  });
-
-  it("strikethrough 어노테이션이 적용된 rich text를 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-strike",
-        type: "paragraph",
-        paragraph: {
-          rich_text: [
-            {
-              plain_text: "취소선 텍스트",
-              href: null,
-              annotations: { bold: false, italic: false, strikethrough: true, underline: false, code: false },
-            },
-          ],
-        },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-    await waitFor(() => {
-      expect(screen.getByText("취소선 텍스트")).toHaveClass("line-through");
-    });
-  });
-
-  it("underline 어노테이션이 적용된 rich text를 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-underline",
-        type: "paragraph",
-        paragraph: {
-          rich_text: [
-            {
-              plain_text: "밑줄 텍스트",
-              href: null,
-              annotations: { bold: false, italic: false, strikethrough: false, underline: true, code: false },
-            },
-          ],
-        },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-    await waitFor(() => {
-      expect(screen.getByText("밑줄 텍스트")).toHaveClass("underline");
-    });
-  });
-
-  it("image 블록(file 타입)을 img 태그로 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-img-file",
-        type: "image",
-        image: {
-          type: "file",
-          file: { url: "https://s3.amazonaws.com/image.png" },
-        },
-      },
-    ]);
-
-    const { container } = render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      const img = container.querySelector("img");
-      expect(img).toHaveAttribute("src", "https://s3.amazonaws.com/image.png");
-    });
-  });
-
-  it("image 블록에 URL이 없으면 렌더링을 생략한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-img-empty",
-        type: "image",
-        image: { type: "file" },
-      },
-    ]);
-
-    const { container } = render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    // 로딩 완료 대기
-    await waitFor(() => {
-      expect(screen.queryByText("불러오는 중...")).not.toBeInTheDocument();
-    });
-    expect(container.querySelector("img")).not.toBeInTheDocument();
-  });
-
-  it("callout 블록에 이모지가 없어도 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-callout-no-icon",
-        type: "callout",
-        callout: {
-          rich_text: [{ plain_text: "이모지 없는 안내", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }],
-          icon: {},
-        },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-    await waitFor(() => {
-      expect(screen.getByText("이모지 없는 안내")).toBeInTheDocument();
-    });
-  });
-
-  it("to_do 블록이 미체크 상태일 때 체크박스가 비어있다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-todo-unchecked",
-        type: "to_do",
-        to_do: {
-          rich_text: [{ plain_text: "미완료 할 일", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }],
-          checked: false,
-        },
-      },
-    ]);
-
-    const { container } = render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      const checkbox = container.querySelector("input[type='checkbox']");
-      expect(checkbox).not.toBeChecked();
-    });
-  });
-
-  it("지원하지 않는 블록 타입(default)은 null을 반환한다", async () => {
-    mockFetchSuccess([
-      { id: "block-unknown", type: "child_page", child_page: { title: "서브페이지" } },
+      { id: "b", type: "paragraph", paragraph: { rich_text: [rt("굵은", { bold: true })] } },
+      { id: "i", type: "paragraph", paragraph: { rich_text: [rt("기울임", { italic: true })] } },
+      { id: "s", type: "paragraph", paragraph: { rich_text: [rt("취소선", { strikethrough: true })] } },
+      { id: "u", type: "paragraph", paragraph: { rich_text: [rt("밑줄", { underline: true })] } },
+      { id: "c", type: "paragraph", paragraph: { rich_text: [rt("코드조각", { code: true })] } },
+      { id: "l", type: "paragraph", paragraph: { rich_text: [rt("링크", { href: "https://example.com" })] } },
     ]);
 
     render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
 
-    // 로딩 완료까지 대기
     await waitFor(() => {
-      expect(screen.queryByText("불러오는 중...")).not.toBeInTheDocument();
+      expect(screen.getByText("굵은")).toHaveClass("font-semibold");
+      expect(screen.getByText("기울임")).toHaveClass("italic");
+      expect(screen.getByText("취소선")).toHaveClass("line-through");
+      expect(screen.getByText("밑줄")).toHaveClass("underline");
+      expect(screen.getByText("코드조각").tagName).toBe("CODE");
+      expect(screen.getByText("링크").closest("a")).toHaveAttribute("href", "https://example.com");
     });
-
-    // child_page는 rich_text가 없어 hasVisibleContent === false → Notion 링크 안내를 표시한다
-    expect(screen.getByText("이 페이지는 Notion에서 직접 확인해 주세요.")).toBeInTheDocument();
-    // 에러는 없다
-    expect(screen.queryByText("에러")).not.toBeInTheDocument();
   });
 
-  it("rich_text가 없는 블록들을 에러 없이 처리한다 (null 방어 분기)", async () => {
-    // 각 블록 타입에서 data.rich_text ?? [] 의 null 분기를 커버
+  it("빈 paragraph는 br, 빈 콘텐츠는 Notion 안내를 표시한다", async () => {
+    // 빈 paragraph → br
+    mockFetchSuccess([
+      { id: "p1", type: "paragraph", paragraph: { rich_text: [rt("내용")] } },
+      { id: "p2", type: "paragraph", paragraph: { rich_text: [] } },
+    ]);
+    const { container, unmount } = render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+    await waitFor(() => expect(container.querySelector("br")).toBeInTheDocument());
+    unmount();
+
+    // 블록 0개 → Notion 안내
+    mockFetchSuccess([]);
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByText("이 페이지는 Notion에서 직접 확인해 주세요.")).toBeInTheDocument());
+  });
+
+  it("image 블록(external/file/URL없음)을 렌더링한다", async () => {
+    mockFetchSuccess([
+      { id: "img1", type: "image", image: { type: "external", external: { url: "https://example.com/image.png" } } },
+      { id: "img2", type: "image", image: { type: "file", file: { url: "https://s3.amazonaws.com/image.png" } } },
+      { id: "img3", type: "image", image: { type: "file" } },
+    ]);
+
+    const { container } = render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+    await waitFor(() => {
+      const imgs = container.querySelectorAll("img");
+      expect(imgs.length).toBe(2);
+      expect(imgs[0]).toHaveAttribute("src", "https://example.com/image.png");
+      expect(imgs[1]).toHaveAttribute("src", "https://s3.amazonaws.com/image.png");
+    });
+  });
+
+  it("file 블록(PDF/비PDF/URL없음/size없음)을 렌더링한다", async () => {
+    mockFetchSuccess([
+      { id: "f1", type: "file", file: { name: "manual.pdf", size: "512 KB", url: "https://s3.amazonaws.com/manual.pdf" } },
+      { id: "f2", type: "file", file: { name: "data.zip", size: "1.2 MB", url: "https://s3.amazonaws.com/data.zip" } },
+      { id: "f3", type: "file", file: { name: "attachment.pdf", size: null, url: null } },
+      { id: "f4", type: "file", file: { name: "report.docx", size: null, url: "https://s3.amazonaws.com/report.docx" } },
+    ]);
+
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+    await waitFor(() => {
+      // PDF → 새 탭
+      const pdfLink = screen.getByText("manual.pdf").closest("a");
+      expect(pdfLink).toHaveAttribute("target", "_blank");
+
+      // 비PDF → 다운로드
+      const zipLink = screen.getByText("data.zip").closest("a");
+      expect(zipLink).toHaveAttribute("download", "data.zip");
+
+      // URL 없음 → Notion 안내
+      expect(screen.getByText("attachment.pdf")).toBeInTheDocument();
+
+      // size null → 크기 미표시
+      const docxLink = screen.getByText("report.docx").closest("a");
+      expect(docxLink).toHaveAttribute("download", "report.docx");
+    });
+  });
+
+  it("rich_text가 없는 블록, 미지원 블록, callout 아이콘 없음을 에러 없이 처리한다", async () => {
     mockFetchSuccess([
       { id: "h1", type: "heading_1", heading_1: {} },
       { id: "h2", type: "heading_2", heading_2: {} },
@@ -706,268 +264,55 @@ describe("NotionModal", () => {
       { id: "qt", type: "quote", quote: {} },
       { id: "cl", type: "callout", callout: {} },
       { id: "co", type: "code", code: {} },
+      { id: "uk", type: "unknown_xyz", unknown_xyz: {} },
     ]);
 
     render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-
-    await waitFor(() => {
-      expect(screen.queryByText("불러오는 중...")).not.toBeInTheDocument();
-    });
-
+    await waitFor(() => expect(screen.queryByText("불러오는 중...")).not.toBeInTheDocument());
     expect(screen.queryByText(/페이지를 불러오지 못했습니다/)).not.toBeInTheDocument();
   });
 
-  it("에러 응답에 error 필드가 없으면 'Unknown error'로 처리한다", async () => {
-    // data.error ?? "Unknown error" 의 null 분기 커버
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({}),
-    });
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Unknown error/)).toBeInTheDocument();
-    });
-  });
-
-  it("fetch가 Error 인스턴스가 아닌 값으로 실패하면 기본 에러 메시지를 표시한다", async () => {
-    // err instanceof Error 의 false 분기 커버
-    mockFetch.mockRejectedValueOnce("string error");
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("페이지를 불러오지 못했습니다.")
-      ).toBeInTheDocument();
-    });
-  });
-
-  it("child_page 블록 클릭 시 서브페이지로 이동하고 뒤로가기 버튼이 나타난다", async () => {
-    const subPageUrl = "https://www.notion.so/87e1f915cdf083ca827e812ef3a5a3e1";
-    // 첫 번째 fetch: child_page 블록 반환
+  it("to_do 미체크 상태에서 체크박스가 비어있다", async () => {
     mockFetchSuccess([
-      {
-        id: "block-child",
-        type: "child_page",
-        child_page: {
-          url: subPageUrl,
-          rich_text: [
-            {
-              plain_text: "서브페이지 제목",
-              href: null,
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false },
-            },
-          ],
-        },
-      },
+      { id: "td", type: "to_do", to_do: { rich_text: [rt("미완료")], checked: false } },
     ]);
-    // 두 번째 fetch: 서브페이지 블록 반환
-    mockFetchSuccess([
-      {
-        id: "block-para",
-        type: "paragraph",
-        paragraph: {
-          rich_text: [
-            {
-              plain_text: "서브페이지 내용",
-              href: null,
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false },
-            },
-          ],
-        },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-
-    // child_page 버튼이 렌더링될 때까지 대기
-    await waitFor(() => {
-      expect(screen.getByText("서브페이지 제목")).toBeInTheDocument();
-    });
-
-    // 클릭하면 서브페이지로 이동한다
-    fireEvent.click(screen.getByText("서브페이지 제목"));
-
-    // 서브페이지 제목이 헤더에 표시되고 뒤로가기 버튼이 나타난다
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "이전 페이지" })).toBeInTheDocument();
-    });
+    const { container } = render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+    await waitFor(() => expect(container.querySelector("input[type='checkbox']")).not.toBeChecked());
   });
 
-  it("file 블록(PDF)은 새 탭 링크로 렌더링한다", async () => {
+  // ── 서브페이지 네비게이션 ──
+
+  it("child_page 클릭 시 서브페이지로 이동하고 뒤로가기로 복귀한다", async () => {
+    const subPageUrl = "https://u-pham.notion.site/eeff0011223344556677889900aabbcc";
     mockFetchSuccess([
-      {
-        id: "block-file-pdf",
-        type: "file",
-        file: { name: "manual.pdf", size: "512 KB", url: "https://s3.amazonaws.com/manual.pdf" },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-
-    await waitFor(() => {
-      const link = screen.getByText("manual.pdf").closest("a");
-      // PDF는 새 탭으로 열린다
-      expect(link).toHaveAttribute("target", "_blank");
-      expect(link).toHaveAttribute("rel", "noopener noreferrer");
-    });
-  });
-
-  it("file 블록(비-PDF)은 다운로드 링크로 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-file-zip",
-        type: "file",
-        file: { name: "data.zip", size: "1.2 MB", url: "https://s3.amazonaws.com/data.zip" },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-
-    await waitFor(() => {
-      const link = screen.getByText("data.zip").closest("a");
-      // 비-PDF 파일은 다운로드 속성을 가진다
-      expect(link).toHaveAttribute("download", "data.zip");
-    });
-  });
-
-  it("file 블록에 URL이 없으면 'Notion에서 열기' 안내를 표시한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-file-no-url",
-        type: "file",
-        file: { name: "attachment.pdf", size: null, url: null },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("attachment.pdf")).toBeInTheDocument();
-      // URL이 없으면 다운로드 링크 대신 안내 문구를 표시한다
-      const notionLinks = screen.getAllByText("Notion에서 열기");
-      expect(notionLinks.length).toBeGreaterThanOrEqual(1);
-    });
-  });
-
-  it("toggle 블록을 details/summary로 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-toggle",
-        type: "toggle",
-        toggle: {
-          rich_text: [{ plain_text: "토글 제목", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }],
-        },
-      },
-    ]);
-
-    const { container } = render(
-      <NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />
-    );
-
-    await waitFor(() => {
-      expect(container.querySelector("details")).toBeInTheDocument();
-      expect(screen.getByText("토글 제목")).toBeInTheDocument();
-    });
-  });
-
-  it("file 블록(URL 있음, size null)을 다운로드 링크로 렌더링한다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-file-no-size",
-        type: "file",
-        file: { name: "report.docx", size: null, url: "https://s3.amazonaws.com/report.docx" },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-
-    await waitFor(() => {
-      const link = screen.getByText("report.docx").closest("a");
-      expect(link).toHaveAttribute("download", "report.docx");
-      // size가 null이면 크기 텍스트가 렌더링되지 않는다
-      expect(screen.queryByText(/KB|MB|GB/)).not.toBeInTheDocument();
-    });
-  });
-
-  it("file 블록(URL 없음, size 있음)에서 크기를 표시하고 Notion 안내를 보인다", async () => {
-    mockFetchSuccess([
-      {
-        id: "block-file-no-url-with-size",
-        type: "file",
-        file: { name: "sheet.xlsx", size: "200 KB", url: null },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("sheet.xlsx")).toBeInTheDocument();
-      expect(screen.getByText("200 KB")).toBeInTheDocument();
-    });
-  });
-
-  it("child_page 블록에 plain_text가 없으면 '페이지' 기본 제목을 사용한다", async () => {
-    const subPageUrl = "https://www.notion.so/87e1f915cdf083ca827e812ef3a5a3e2";
-    mockFetchSuccess([
-      {
-        id: "block-child-no-title",
-        type: "child_page",
-        child_page: {
-          url: subPageUrl,
-          // rich_text 항목은 있지만 plain_text가 없어 "페이지" 폴백 사용
-          rich_text: [{ href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }],
-        },
-      },
-    ]);
-
-    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-
-    await waitFor(() => {
-      // plain_text가 없으면 "페이지" 기본 텍스트가 버튼에 표시된다
-      expect(screen.getByText("페이지")).toBeInTheDocument();
-    });
-  });
-
-  it("뒤로가기 버튼 클릭 시 이전 페이지로 돌아간다", async () => {
-    const subPageUrl = "https://www.notion.so/87e1f915cdf083ca827e812ef3a5a3e1";
-    mockFetchSuccess([
-      {
-        id: "block-child",
-        type: "child_page",
-        child_page: {
-          url: subPageUrl,
-          rich_text: [
-            {
-              plain_text: "서브페이지 제목",
-              href: null,
-              annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false },
-            },
-          ],
-        },
-      },
+      { id: "cp", type: "child_page", child_page: { url: subPageUrl, rich_text: [rt("서브페이지 제목")] } },
     ]);
     mockFetchSuccess([]);
 
     render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("서브페이지 제목")).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByText("서브페이지 제목")).toBeInTheDocument());
 
     fireEvent.click(screen.getByText("서브페이지 제목"));
+    await waitFor(() => expect(screen.getByRole("button", { name: "이전 페이지" })).toBeInTheDocument());
 
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "이전 페이지" })).toBeInTheDocument();
-    });
-
-    // 뒤로가기 클릭 시 이전 페이지 제목으로 복귀한다
     fireEvent.click(screen.getByRole("button", { name: "이전 페이지" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "이전 페이지" })).not.toBeInTheDocument());
+  });
 
-    await waitFor(() => {
-      expect(screen.queryByRole("button", { name: "이전 페이지" })).not.toBeInTheDocument();
-    });
+  it("child_page에 plain_text가 없으면 '페이지' 기본 제목을 사용한다", async () => {
+    mockFetchSuccess([
+      { id: "cp", type: "child_page", child_page: { url: "https://u-pham.notion.site/abc", rich_text: [{ href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false } }] } },
+    ]);
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByText("페이지")).toBeInTheDocument());
+  });
+
+  it("child_page만 있는 경우(visible content 없음) Notion 안내를 표시한다", async () => {
+    mockFetchSuccess([
+      { id: "cp", type: "child_page", child_page: { title: "서브페이지" } },
+    ]);
+    render(<NotionModal pageUrl={TEST_URL} pageTitle={TEST_TITLE} onClose={() => {}} />);
+    await waitFor(() => expect(screen.queryByText("불러오는 중...")).not.toBeInTheDocument());
+    expect(screen.getByText("이 페이지는 Notion에서 직접 확인해 주세요.")).toBeInTheDocument();
   });
 });

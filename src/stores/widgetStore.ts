@@ -11,8 +11,6 @@ export type WidgetId =
   | "recent"
   | "popular"
   | "weather"
-  | "exchange"
-  | "market"
   | "memo"
   | "calendar"
   | "dday"
@@ -42,7 +40,7 @@ export const DEFAULT_WIDGET_ORDER: WidgetId[] = [
   // 4순위: 계산기 (요금·수수료 문의 대응)
   "calculator",
   // 최하단: 개인 생활 정보 (업무 무관, 원하면 위로 재정렬 가능)
-  "weather", "weekly-weather", "exchange", "market",
+  "weather", "weekly-weather",
 ];
 
 /** 위젯 스토어 상태 및 액션 타입 */

@@ -52,7 +52,7 @@ export const knowledgeSections: KnowledgeSection[] = [
           {
             id: "prescription-dispensing-fallback",
             title: "처방조제",
-            url: "https://www.notion.so/40e1f915cdf083b1a12c81d925ccecca",
+            url: "https://u-pham.notion.site/d7da0d519b4a4f3194da38e50b6ee15e",
           },
         ],
       },

@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Bookmark, Plus, ExternalLink, X } from "lucide-react";
 import { useBookmarkStore } from "@/stores/bookmarkStore";
 import { WidgetCard } from "./WidgetCard";
+import { WidgetEmptyState, FormActionButtons } from "./WidgetFeedback";
 
 export function BookmarkWidget() {
   // 북마크 상태는 Zustand 스토어가 관리한다 (persist 미들웨어로 localStorage 자동 영속화)
@@ -33,9 +34,7 @@ export function BookmarkWidget() {
     >
       {/* 북마크 목록 */}
       {bookmarks.length === 0 && !isAdding && (
-        <p className="text-center text-xs text-gray-400 dark:text-zinc-500">
-          저장된 북마크가 없습니다
-        </p>
+        <WidgetEmptyState message="저장된 북마크가 없습니다" />
       )}
       {bookmarks.length > 0 && (
         <ul className="mb-2 flex max-h-44 flex-col gap-1.5 overflow-y-auto">
@@ -82,20 +81,11 @@ export function BookmarkWidget() {
             placeholder="https://..."
             className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-sky-300 focus:ring-1 focus:ring-sky-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
           />
-          <div className="flex gap-2">
-            <button
-              onClick={addBookmark}
-              className="flex-1 rounded-lg bg-sky-500 py-1.5 text-xs font-medium text-white hover:bg-sky-600"
-            >
-              추가
-            </button>
-            <button
-              onClick={() => { setIsAdding(false); setNewTitle(""); setNewUrl(""); }}
-              className="flex-1 rounded-lg border border-gray-200 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-zinc-700 dark:text-zinc-400"
-            >
-              취소
-            </button>
-          </div>
+          <FormActionButtons
+            onConfirm={addBookmark}
+            onCancel={() => { setIsAdding(false); setNewTitle(""); setNewUrl(""); }}
+            confirmColor="bg-sky-500 hover:bg-sky-600"
+          />
         </div>
       ) : (
         <button

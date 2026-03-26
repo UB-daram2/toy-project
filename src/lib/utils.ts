@@ -12,7 +12,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
 
 /**
  * Notion 페이지 URL에서 32자리 페이지 ID를 추출한다.
- * 예: https://www.notion.so/Title-87e1f915cdf083ca → "87e1f915cdf083ca..."
+ * 예: https://u-pham.notion.site/f619ba2093174f54b31f1c5eba82a468 → "f619ba2093174f54..."
  */
 export function extractPageIdFromUrl(url: string): string {
   // URL 끝의 32자리 hex 문자열을 추출 (하이픈 없는 형태)

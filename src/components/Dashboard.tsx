@@ -14,15 +14,18 @@ import {
   searchKnowledge,
   type KnowledgeSection,
 } from "@/data/knowledge-base";
-import {
-  useKnowledgeStructure,
-  NOTION_ROOT_URL,
-} from "@/hooks/useKnowledgeStructure";
+import { useKnowledgeStructure } from "@/hooks/useKnowledgeStructure";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { SectionView } from "./SectionView";
 import { SearchResultsView } from "./SearchResultsView";
 import { HomeView } from "./HomeView";
+import {
+  KnowledgeLoadingBanner,
+  KnowledgeErrorBanner,
+  KnowledgeLoadingState,
+  KnowledgeErrorState,
+} from "./KnowledgeStatusUI";
 import {
   LayoutDashboard,
   BookOpen,
@@ -30,11 +33,6 @@ import {
   Download,
   Sun,
   Moon,
-  Loader2,
-  AlertCircle,
-  Clock,
-  ExternalLink,
-  RefreshCw,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn, getSectionColorClasses } from "@/lib/utils";
@@ -143,9 +141,6 @@ export function Dashboard({ initialSections = [] }: DashboardProps) {
               {status === "error" && (
                 <KnowledgeErrorBanner retry={retry} />
               )}
-              {status === "cached" && (
-                <KnowledgeCachedBanner retry={retry} />
-              )}
               <HomeView
                 sections={sections}
                 searchQuery={searchQuery}
@@ -167,13 +162,13 @@ export function Dashboard({ initialSections = [] }: DashboardProps) {
           ) : searchQuery.trim() ? (
             /* 검색어 있음: 관련도 순위화 결과 뷰 */
             <>
-              {status === "cached" && <KnowledgeCachedBanner retry={retry} />}
+
               <SearchResultsView sections={sections} query={searchQuery} />
             </>
           ) : activeSectionData ? (
             /* 섹션 탐색: 선택된 섹션 콘텐츠 */
             <>
-              {status === "cached" && <KnowledgeCachedBanner retry={retry} />}
+
               <SectionView section={activeSectionData} isSearchResult={false} />
             </>
           ) : null}
@@ -272,141 +267,3 @@ export function Dashboard({ initialSections = [] }: DashboardProps) {
   );
 }
 
-/** 홈 탭 상단 로딩 배너 (위젯은 그대로 표시) */
-function KnowledgeLoadingBanner({
-  status,
-  retryAttempt,
-  maxRetries,
-}: {
-  status: "loading" | "retrying";
-  retryAttempt: number;
-  maxRetries: number;
-}) {
-  return (
-    <div className="mb-4 flex items-center gap-2 rounded-lg border border-indigo-200/60 bg-indigo-50/80 px-4 py-2.5 text-sm text-indigo-700 dark:border-indigo-800/40 dark:bg-indigo-950/40 dark:text-indigo-300">
-      <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-      <span>
-        {status === "retrying"
-          ? `지식베이스 재시도 중... (${retryAttempt}/${maxRetries})`
-          : "지식베이스 불러오는 중..."}
-      </span>
-    </div>
-  );
-}
-
-/** 홈 탭 상단 캐시 배너 — Notion 로딩 실패 + 이전 캐시 사용 중 */
-function KnowledgeCachedBanner({ retry }: { retry: () => void }) {
-  return (
-    <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-gray-200/60 bg-gray-50/80 px-4 py-2.5 text-sm dark:border-zinc-700/40 dark:bg-zinc-800/30">
-      <div className="flex items-center gap-2 text-gray-500 dark:text-zinc-400">
-        <Clock className="h-3.5 w-3.5 shrink-0" />
-        <span>저장된 데이터를 사용 중입니다</span>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <button
-          onClick={retry}
-          className="flex items-center gap-1 text-gray-500 underline-offset-2 hover:underline dark:text-zinc-400"
-        >
-          <RefreshCw className="h-3 w-3" />
-          새로고침
-        </button>
-        <a
-          href={NOTION_ROOT_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-gray-500 underline-offset-2 hover:underline dark:text-zinc-400"
-        >
-          Notion 열기
-          <ExternalLink className="h-3 w-3" />
-        </a>
-      </div>
-    </div>
-  );
-}
-
-/** 홈 탭 상단 에러 배너 (위젯은 그대로 표시) */
-function KnowledgeErrorBanner({ retry }: { retry: () => void }) {
-  return (
-    <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200/60 bg-amber-50/80 px-4 py-2.5 text-sm dark:border-amber-800/40 dark:bg-amber-950/30">
-      <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
-        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-        <span>지식베이스를 불러올 수 없습니다</span>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <button
-          onClick={retry}
-          className="flex items-center gap-1 text-amber-700 underline-offset-2 hover:underline dark:text-amber-300"
-        >
-          <RefreshCw className="h-3 w-3" />
-          재시도
-        </button>
-        <a
-          href={NOTION_ROOT_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-amber-700 underline-offset-2 hover:underline dark:text-amber-300"
-        >
-          Notion 열기
-          <ExternalLink className="h-3 w-3" />
-        </a>
-      </div>
-    </div>
-  );
-}
-
-/** 로딩·재시도 상태 UI */
-function KnowledgeLoadingState({
-  status,
-  retryAttempt,
-  maxRetries,
-}: {
-  status: "loading" | "retrying";
-  retryAttempt: number;
-  maxRetries: number;
-}) {
-  return (
-    <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
-      <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-      <p className="text-sm text-gray-500 dark:text-zinc-400">
-        {status === "retrying"
-          ? `재시도 중... (${retryAttempt}/${maxRetries})`
-          : "지식베이스 불러오는 중..."}
-      </p>
-    </div>
-  );
-}
-
-/** 최종 실패 상태 UI */
-function KnowledgeErrorState({ retry }: { retry: () => void }) {
-  return (
-    <div className="flex min-h-[400px] flex-col items-center justify-center gap-5 text-center">
-      <AlertCircle className="h-10 w-10 text-gray-300 dark:text-zinc-600" />
-      <div className="space-y-1">
-        <p className="font-medium text-gray-600 dark:text-zinc-300">
-          지식베이스를 불러올 수 없습니다
-        </p>
-        <p className="text-sm text-gray-400 dark:text-zinc-500">
-          Notion 서버가 응답하지 않습니다
-        </p>
-      </div>
-      <div className="flex gap-3">
-        <button
-          onClick={retry}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          다시 시도
-        </button>
-        <a
-          href={NOTION_ROOT_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/50"
-        >
-          Notion에서 열기
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      </div>
-    </div>
-  );
-}

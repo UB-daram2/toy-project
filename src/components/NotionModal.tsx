@@ -160,8 +160,45 @@ export function NotionModal({ pageUrl, pageTitle, onClose }: NotionModalProps) {
           )}
 
           {error && (
-            <div className="flex items-center justify-center py-16 text-sm text-red-500">
-              {error}
+            <div className="flex flex-col items-center justify-center gap-4 py-16">
+              <p className="text-sm text-red-500">{error}</p>
+              {/* 429 레이트 리밋 에러 시 추가 안내 */}
+              {error.includes("429") && (
+                <p className="text-xs text-gray-400 dark:text-zinc-500">
+                  Notion API 요청이 너무 많아 일시적으로 차단되었습니다. 잠시 후 다시 시도해 주세요.
+                </p>
+              )}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setError(null);
+                    setIsLoading(true);
+                    const id = extractPageIdFromUrl(currentPage.url);
+                    if (id) {
+                      fetch(`/api/notion/${id}`)
+                        .then((r) => r.json())
+                        .then((data) => {
+                          if (data.error) throw new Error(data.error);
+                          setBlocks(data.blocks as NotionBlock[]);
+                        })
+                        .catch((err) => setError(err instanceof Error ? err.message : "페이지를 불러오지 못했습니다."))
+                        .finally(() => setIsLoading(false));
+                    }
+                  }}
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-100"
+                >
+                  다시 시도
+                </button>
+                <a
+                  href={currentPage.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-gray-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  Notion에서 열기
+                </a>
+              </div>
             </div>
           )}
 

@@ -3,11 +3,9 @@
 /**
  * Notion 지식베이스 구조를 클라이언트에서 가져오는 커스텀 훅.
  * /api/knowledge-structure 엔드포인트를 호출하며,
- * 실패 시 최대 2회 자동 재시도하고, 로컬 캐시를 폴백으로 활용한다.
+ * 실패 시 최대 2회 자동 재시도한다. 캐시 없이 항상 최신 데이터를 요청한다.
  *
- * 상태 전이:
- *   캐시 없음: loading → (retrying ×2) → success | error
- *   캐시 있음: 즉시 캐시 표시, 백그라운드 갱신 → success | cached
+ * 상태 전이: loading → (retrying ×2) → success | error
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -15,10 +13,7 @@ import type { KnowledgeSection } from "@/data/knowledge-base";
 
 /** 기술지원 최상위 Notion 페이지 URL (에러 시 안내용) */
 export const NOTION_ROOT_URL =
-  "https://www.notion.so/40e1f915cdf083b1a12c81d925ccecca";
-
-/** localStorage 캐시 키 */
-const CACHE_KEY = "upharm_knowledge_structure";
+  "https://u-pham.notion.site/f619ba2093174f54b31f1c5eba82a468";
 
 /** 총 시도 횟수 (초기 1회 + 재시도 2회) */
 const MAX_ATTEMPTS = 3;
@@ -28,11 +23,10 @@ const RETRY_DELAYS_MS = [1000, 2000];
 
 /** 지식베이스 로딩 상태 */
 export type KnowledgeStatus =
-  | "loading"  // 캐시 없음, 첫 로딩 중
-  | "retrying" // 캐시 없음, 재시도 중
-  | "success"  // 최신 Notion 데이터 로딩 성공
-  | "cached"   // Notion 로딩 실패 + 이전 캐시 사용 중
-  | "error";   // Notion 로딩 실패 + 캐시 없음
+  | "loading"  // 첫 로딩 중
+  | "retrying" // 재시도 중
+  | "success"  // Notion 데이터 로딩 성공
+  | "error";   // 모든 시도 실패
 
 export interface UseKnowledgeStructureResult {
   sections: KnowledgeSection[];
@@ -45,32 +39,10 @@ export interface UseKnowledgeStructureResult {
   retry: () => void;
 }
 
-/** localStorage에서 캐시된 섹션 배열을 읽는다 */
-function loadCache(): KnowledgeSection[] {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as KnowledgeSection[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-/** 섹션 배열을 localStorage에 캐시로 저장한다 */
-function saveCache(sections: KnowledgeSection[]): void {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(sections));
-  } catch {
-    // 용량 초과 등 쓰기 실패 시 무시
-  }
-}
-
 export function useKnowledgeStructure(
   /** 서버사이드에서 미리 로딩된 초기 섹션. 제공 시 즉시 success 상태로 시작한다 */
   initialSections: KnowledgeSection[] = []
 ): UseKnowledgeStructureResult {
-  // initialSections가 있으면 즉시 표시 (SSR과 동일한 값이 전달되므로 하이드레이션 안전)
   const [sections, setSections] = useState<KnowledgeSection[]>(initialSections);
   const [status, setStatus] = useState<KnowledgeStatus>(
     initialSections.length > 0 ? "success" : "loading"
@@ -81,26 +53,13 @@ export function useKnowledgeStructure(
   const initialSectionsRef = useRef(initialSections);
 
   const load = useCallback(async () => {
-    // load() 시작 시점의 캐시 및 초기 데이터 보유 여부 확인
-    const cachedSections = loadCache();
-    const hasCached = cachedSections.length > 0;
-    // 캐시 또는 서버 초기 데이터가 있으면 fetch 중에도 빈 화면이 표시되지 않는다
-    const hasDisplayData = hasCached || initialSectionsRef.current.length > 0;
-
-    // 캐시가 있으면 즉시 표시, 항상 loading으로 전환해 갱신 중임을 알린다
-    if (hasCached) {
-      setSections(cachedSections);
-    }
     setStatus("loading");
     setRetryAttempt(0);
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       // 재시도 전 상태 업데이트 및 대기
       if (attempt > 0) {
-        // 표시 중인 데이터가 없을 때만 retrying 배너 표시
-        if (!hasDisplayData) {
-          setStatus("retrying");
-        }
+        setStatus("retrying");
         setRetryAttempt(attempt);
         await new Promise<void>((r) =>
           setTimeout(r, RETRY_DELAYS_MS[attempt - 1])
@@ -112,24 +71,16 @@ export function useKnowledgeStructure(
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data: KnowledgeSection[] = await res.json();
         if (!Array.isArray(data) || data.length === 0) throw new Error("빈 응답");
-        // 성공: 캐시 저장 후 최신 데이터로 교체
-        saveCache(data);
         setSections(data);
         setStatus("success");
         return;
       } catch {
-        // 마지막 시도 실패 시 캐시 → 서버 초기 데이터 → error 순으로 폴백
+        // 마지막 시도 실패 시 서버 초기 데이터가 있으면 유지, 없으면 error
         if (attempt === MAX_ATTEMPTS - 1) {
-          if (hasCached) {
-            setSections(cachedSections);
-            setStatus("cached");
-          } else if (initialSectionsRef.current.length > 0) {
-            // 서버 초기 데이터(또는 정적 폴백)를 cached 상태로 유지
+          if (initialSectionsRef.current.length > 0) {
             setSections(initialSectionsRef.current);
-            setStatus("cached");
-          } else {
-            setStatus("error");
           }
+          setStatus("error");
         }
       }
     }
