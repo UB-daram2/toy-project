@@ -27,7 +27,10 @@
       "Bash(powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Select-Object Id, CPU, StartTime | Format-Table\")",
       "Bash(powershell -Command \"Stop-Process -Name node -Force -ErrorAction SilentlyContinue; Write-Host ''all node processes killed''\")",
       "Bash(powershell -Command \"Remove-Item ''c:\\\\Users\\\\daram2\\\\Desktop\\\\toy-project\\\\.next\\\\dev\\\\lock'' -Force -ErrorAction SilentlyContinue; Write-Host ''lock removed''\")",
-      "Bash(kill 67876)"
+      "Bash(kill 67876)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(taskkill //F //PID 34916)"
     ]
   }
 }

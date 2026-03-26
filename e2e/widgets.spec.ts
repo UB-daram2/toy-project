@@ -163,12 +163,12 @@ test.describe("다크모드 토글", () => {
 // ── 드래그 핸들 ──────────────────────────────────────────────────────────────
 
 test.describe("위젯 드래그 핸들", () => {
-  test("홈 뷰에 14개 위젯의 드래그 핸들이 DOM에 존재한다", async ({ page }) => {
+  test("홈 뷰에 12개 위젯의 드래그 핸들이 DOM에 존재한다", async ({ page }) => {
     await page.goto("/");
     const handles = page.getByLabel("위젯 이동 핸들");
     // opacity-0이지만 DOM에 존재해야 드래그앤드롭이 동작한다
     await expect(handles.first()).toBeAttached();
     const count = await handles.count();
-    expect(count).toBe(14);
+    expect(count).toBe(12);
   });
 });
